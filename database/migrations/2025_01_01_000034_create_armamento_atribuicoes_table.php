@@ -10,13 +10,16 @@ return new class extends Migration
     {
         Schema::create('armamento_atribuicoes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('armamento_id')->constrained('armamento');
-            $table->foreignId('agente_id')->constrained('agentes');
+            $table->unsignedBigInteger('armamento_id');
+            $table->unsignedBigInteger('agente_id');
             $table->date('data_atribuicao');
             $table->date('data_devolucao')->nullable();
             $table->enum('estado', ['atribuido', 'devolvido'])->default('atribuido');
             $table->text('observacoes')->nullable();
             $table->timestamps();
+
+            $table->foreign('armamento_id')->references('id')->on('armamento');
+            $table->foreign('agente_id')->references('id')->on('agentes');
         });
     }
 
