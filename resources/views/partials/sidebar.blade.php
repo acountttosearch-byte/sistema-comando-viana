@@ -43,7 +43,9 @@
 
     <div class="sidebar-footer">
         <div class="sidebar-user">
-            <div class="user-avatar sm">{{ substr(auth()->user()->agente?->nome ?? 'A', 0, 1) }}</div>
+            <div class="user-avatar sm">
+                <img src="{{ asset('img/user.svg') }}" alt="User Profile" class="avatar-icon">
+            </div>
             <div class="sidebar-user-info">
                 <span class="sidebar-user-name">{{ explode(' ', auth()->user()->agente?->nome ?? 'Admin')[0] }}</span>
                 <span class="sidebar-user-role">{{ auth()->user()->perfil->descricao }}</span>

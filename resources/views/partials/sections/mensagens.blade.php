@@ -1,7 +1,7 @@
 <div id="section-mensagens" class="section">
     <div class="page-header">
-        <div><h1 class="page-title">Mensagens</h1><p class="page-desc">Comunicação interna</p></div>
-        <button class="btn-primary" onclick="modalNovaMensagem()"><i class='bx bx-plus'></i> Nova</button>
+        <div><h1 class="page-title">Mensagens</h1><p class="page-desc">Comunicacao interna</p></div>
+        <button class="btn-primary" onclick="formNovaMensagem()"><i class='bx bx-plus'></i> Nova</button>
     </div>
     <div class="tabs-bar">
         <button class="tab active" onclick="loadMensagens('inbox',event)">Recebidas</button>

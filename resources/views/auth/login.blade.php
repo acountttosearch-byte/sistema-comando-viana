@@ -4,7 +4,7 @@
 @push('styles')
 <style>
     body.login-body {
-        background: #6196ff;
+        background: #11306ed3;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -17,10 +17,21 @@
         border: 1px solid #e5e7eb;
         border-radius: 16px;
         padding: 48px 40px;
-        width: 100%;
-        max-width: 420px;
+        width: 580px;
+        max-width: 720px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
+
+    form#login-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    form#login-form .form-group {
+        width: 90%;
+    }
+    
 
     .login-logo {
         width: 64px;
@@ -66,12 +77,11 @@
     }
 
     .login-input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        border-color: #426dfa;
     }
 
     .login-btn {
-        width: 100%;
+        width: 60%;
         padding: 11px;
         background: #111827;
         color: #fff;
@@ -118,7 +128,7 @@
 
     .login-link a {
         font-size: 13px;
-        color: #6366f1;
+        color: #771eeb;
         text-decoration: none;
     }
 
@@ -150,22 +160,24 @@
     <div class="login-card">
         <img src="{{ asset('img/bnd.png') }}" alt="Logo" class="login-logo">
         <h1 class="login-title">Bem-vindo</h1>
-        <p class="login-sub">Sistema de Comunicação e Gerenciamento de Dados</p>
+        <p class="login-sub">Para entrar, por favor, insira suas credenciais</p>
 
         <form method="POST" action="{{ route('login.submit') }}" id="login-form">
             @csrf
+          <div class="form-group">
             <label class="login-label">Email Institucional</label>
             <input class="login-input" name="email" type="email" placeholder="nome@policia-viana.ao" required>
-
+</div>
+           <div class="form-group">
             <label class="login-label">Palavra-Passe</label>
             <input class="login-input" name="password" type="password" placeholder="••••••••" required>
-
+</div>
             @if ($errors->any())
             <div class="login-error">{{ $errors->first() }}</div>
             @endif
-
+            <div class="form-group" style="width:100%;display:flex;justify-content:flex-end;">
             <div class="login-link"><a href="#">Esqueceu a palavra-passe?</a></div>
-
+</div>
             <button class="login-btn" type="submit" id="login-btn">
                 <span class="spinner-btn" id="login-spinner"></span>
                 <span>Entrar</span>
@@ -173,7 +185,7 @@
         </form>
 
         <div class="login-footer">
-            Comando Municipal de Viana — Polícia Nacional de Angola
+            Polícia Nacional de Angola
         </div>
     </div>
 

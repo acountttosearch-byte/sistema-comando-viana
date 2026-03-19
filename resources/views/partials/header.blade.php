@@ -2,10 +2,6 @@
     <div class="topbar-left">
         <div class="topbar-logo" onclick="showSection('inicio')">
             <img src="{{ asset('img/bnd.png') }}" alt="Logo">
-            <div class="topbar-brand">
-                <span class="brand-name">SCGD</span>
-                <span class="brand-sub">Comando de Viana</span>
-            </div>
         </div>
     </div>
 
@@ -25,7 +21,9 @@
 
         <div class="topbar-user" id="user-dropdown">
             <button class="user-trigger" id="user-trigger">
-                <div class="user-avatar">{{ substr(auth()->user()->agente?->nome ?? 'A', 0, 1) }}</div>
+                <div class="user-avatar">
+                    <img src="{{ asset('img/user.svg') }}" alt="User Profile" class="avatar-icon">
+                </div>
                 <span class="user-name-short">{{ explode(' ', auth()->user()->agente?->nome ?? 'Admin')[0] }}</span>
                 <i class='bx bx-chevron-down'></i>
             </button>
