@@ -605,8 +605,103 @@ async function loadArmamento() { const d = await api('/armamento'); if (!d) retu
 async function loadMensagens(tipo, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } const d = await api('/mensagens/' + (tipo === 'inbox' ? 'inbox' : 'enviadas')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-msg'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem mensagens.</div>'; return; } c.innerHTML = items.map(m => `<div class="tbl-row" style="${!m.lida ? 'font-weight:600;background:var(--navy-light);' : ''}"><div class="col c0">${!m.lida ? '<i class="bx bxs-circle" style="color:var(--navy);font-size:7px;"></i>' : ''}</div><div class="col c2">${tipo === 'inbox' ? (m.remetente?.nome || '-') : (m.destinatario?.nome || '-')}</div><div class="col c3">${m.titulo}</div><div class="col c1">${m.prioridade === 'urgente' ? '<span class="badge badge-red">Urgente</span>' : '<span class="badge badge-gray">Normal</span>'}</div><div class="col c1">${fDT(m.created_at)}</div></div>`).join(''); }
 
 async function loadRelatorios() { const d = await api('/relatorios'); if (!d) return; const items = d.data || []; const c = document.getElementById('list-rel'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem relatorios.</div>'; return; } c.innerHTML = items.map(r => `<div class="tbl-row"><div class="col c2">${r.tipo_relatorio?.nome || '-'}</div><div class="col c2">${fDate(r.periodo_inicio)} - ${fDate(r.periodo_fim)}</div><div class="col c2">${r.unidade?.nome || 'Todas'}</div><div class="col c1">${fDate(r.created_at)}</div></div>`).join(''); }
-async function gerarRelatorio() { showLoad(); const d = await api('/relatorios/gerar', { method: 'POST', body: JSON.stringify({ tipo_relatorio_id: v('rel-tipo'), periodo_inicio: v('rel-di'), periodo_fim: v('rel-df'), unidade_id: v('rel-unidade') || null }) }); hideLoad(); if (d?.success) { toast('Relatorio gerado.', 'ok'); const dt = d.dados; document.getElementById('rel-resultado').style.display = 'block'; document.getElementById('rel-stats').innerHTML = `<div class="stat-card"><div><span class="stat-value">${dt.total_ocorrencias}</span><span class="stat-label">Ocorrencias</span></div></div><div class="stat-card"><div><span class="stat-value">${dt.ocorrencias_resolvidas}</span><span class="stat-label">Resolvidas</span></div></div><div class="stat-card"><div><span class="stat-value">${dt.taxa_resolucao}%</span><span class="stat-label">Taxa Resolucao</span></div></div><div class="stat-card"><div><span class="stat-value">${dt.total_detencoes}</span><span class="stat-label">Detencoes</span></div></div>`; loadRelatorios(); } }
+// ══════════════════
+// RELATORIOS — CORRIGIDO
+// ══════════════════
+async function gerarRelatorio() {
+    const tipo = v('rel-tipo');
+    const di = v('rel-di');
+    const df = v('rel-df');
 
+    if (!tipo) { toast('Selecione o tipo de relatorio.', 'err'); return; }
+    if (!di || !df) { toast('Selecione o periodo (data inicio e fim).', 'err'); return; }
+    if (new Date(di) > new Date(df)) { toast('Data inicio nao pode ser maior que data fim.', 'err'); return; }
+
+    showLoad();
+    const d = await api('/relatorios/gerar', {
+        method: 'POST',
+        body: JSON.stringify({
+            tipo_relatorio_id: tipo,
+            periodo_inicio: di,
+            periodo_fim: df,
+            unidade_id: v('rel-unidade') || null,
+        })
+    });
+    hideLoad();
+
+    if (!d?.success) return;
+
+    const dt = d.dados;
+    toast('Relatorio gerado com sucesso.', 'ok');
+
+    // Mostrar resultado
+    document.getElementById('rel-resultado').style.display = 'block';
+
+    // Metricas
+    document.getElementById('rel-stats').innerHTML = `
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class='bx bx-file'></i></div>
+            <div><span class="stat-value">${dt.total_ocorrencias}</span><span class="stat-label">Ocorrencias</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class='bx bx-check-circle'></i></div>
+            <div><span class="stat-value">${dt.ocorrencias_resolvidas}</span><span class="stat-label">Resolvidas</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class='bx bx-error-circle'></i></div>
+            <div><span class="stat-value">${dt.ocorrencias_abertas || 0}</span><span class="stat-label">Abertas</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class='bx bx-trending-up'></i></div>
+            <div><span class="stat-value">${dt.taxa_resolucao}%</span><span class="stat-label">Taxa Resolucao</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><i class='bx bx-lock-alt'></i></div>
+            <div><span class="stat-value">${dt.total_detencoes}</span><span class="stat-label">Detencoes</span></div>
+        </div>
+    `;
+
+    // Se nao tem dados, avisa
+    if (dt.total_ocorrencias === 0) {
+        toast('Nenhuma ocorrencia encontrada no periodo seleccionado. Tente um periodo mais amplo.', 'warn');
+    }
+
+    loadRelatorios();
+}
+
+function exportPdfRelatorio() {
+    const di = v('rel-di');
+    const df = v('rel-df');
+
+    if (!di || !df) {
+        toast('Primeiro preencha as datas e gere o relatorio.', 'err');
+        return;
+    }
+
+    if (new Date(di) > new Date(df)) {
+        toast('Data inicio nao pode ser maior que data fim.', 'err');
+        return;
+    }
+
+    const params = new URLSearchParams({
+        periodo_inicio: di,
+        periodo_fim: df,
+    });
+
+    const un = v('rel-unidade');
+    if (un) params.append('unidade_id', un);
+
+    // Abre em nova janela — a sessão é partilhada
+    window.open('/api/pdf/relatorio-criminalidade?' + params.toString(), '_blank');
+}
+
+function exportPdfOcorrencia(id) {
+    window.open('/api/pdf/ocorrencia/' + id, '_blank');
+}
+
+function exportPdfAgentes() {
+    window.open('/api/pdf/agentes?estado=activo', '_blank');
+}
 // ══════════════════
 // FORMULARIOS NO MAIN (Viaturas, Armamento, Alertas, etc.)
 // ══════════════════

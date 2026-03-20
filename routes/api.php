@@ -146,7 +146,15 @@ Route::middleware('auth:web')->group(function () {
     // Configurações
     Route::get('/configuracoes', [ConfiguracaoController::class, 'index'])->middleware('permissao:configuracoes.gerir');
     Route::put('/configuracoes', [ConfiguracaoController::class, 'update'])->middleware('permissao:configuracoes.gerir');
-});
+
+    // PDF Export
+    Route::get('/pdf/relatorio-criminalidade', [\App\Http\Controllers\ExportPdfController::class, 'relatorioCriminalidade']);
+    Route::get('/pdf/ocorrencia/{ocorrencia}', [\App\Http\Controllers\ExportPdfController::class, 'fichaOcorrencia']);
+    Route::get('/pdf/detencao/{detencao}', [\App\Http\Controllers\ExportPdfController::class, 'fichaDetencao']);
+    Route::get('/pdf/agentes', [\App\Http\Controllers\ExportPdfController::class, 'listaAgentes']);
+    Route::get('/pdf/alertas', [\App\Http\Controllers\ExportPdfController::class, 'relatorioAlertas']);
+
+    });
 
 // Endpoints públicos (cidadão)
 Route::post('/cidadao/queixa', [QueixaCidadaoController::class, 'submeter']);
