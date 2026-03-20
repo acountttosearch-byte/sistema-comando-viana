@@ -1,8 +1,14 @@
 ================================================================================
    RELATÓRIO COMPLETO DE VERIFICAÇÃO - SISTEMA COMANDO VIANA
    Data: 18 de março de 2026
-   Versão da Aplicação: Laravel 12 com Sanctum + Vite + Tailwind CSS
 ================================================================================
+
+dados de acesso:
+
+Login Admin: admin@policia-viana.ao / Admin@2025
+Login Agentes: *@policia-viana.ao / Agente@2025
+
+
 
 📋 ÍNDICE DO RELATÓRIO
 ================================================================================

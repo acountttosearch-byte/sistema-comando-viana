@@ -42,15 +42,5 @@
     </nav>
 
     <div class="sidebar-footer">
-        <div class="sidebar-user">
-            <div class="user-avatar sm">
-                <img src="{{ asset('img/user.svg') }}" alt="User Profile" class="avatar-icon">
-            </div>
-            <div class="sidebar-user-info">
-                <span class="sidebar-user-name">{{ explode(' ', auth()->user()->agente?->nome ?? 'Admin')[0] }}</span>
-                <span class="sidebar-user-role">{{ auth()->user()->perfil->descricao }}</span>
-            </div>
-            <i class='bx bx-chevron-right'></i>
-        </div>
     </div>
 </aside>
