@@ -114,4 +114,15 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default password for novos agentes
+    |--------------------------------------------------------------------------
+    |
+    | Usado quando um agente é criado pelo backoffice. Mantemos aqui para
+    | evitar divergências de ano entre seeds e criação via API.
+    |
+    */
+    'default_agent_password' => env('DEFAULT_AGENT_PASSWORD', 'Agente@2025'),
+
 ];

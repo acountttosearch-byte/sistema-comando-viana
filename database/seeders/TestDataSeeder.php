@@ -62,7 +62,7 @@ class TestDataSeeder extends Seeder
             $emailBase = strtolower(str_replace(' ', '.', explode(' ', $c['nome'])[1] ?? 'ag'));
             $user = User::create([
                 'email' => $emailBase . $nipBase . '@policia-viana.ao',
-                'password' => Hash::make('Agente@2025'),
+                'password' => Hash::make(config('auth.default_agent_password')),
                 'perfil_id' => $c['perfil'], 'estado' => 'activo',
             ]);
             $agentes[] = Agente::create([
@@ -93,7 +93,7 @@ class TestDataSeeder extends Seeder
 
             $user = User::create([
                 'email' => 'agente' . $nipBase . '@policia-viana.ao',
-                'password' => Hash::make('Agente@2025'),
+                'password' => Hash::make(config('auth.default_agent_password')),
                 'perfil_id' => $cargo === 'Operador de Atendimento' ? 6 : 5,
                 'estado' => 'activo',
             ]);
@@ -486,6 +486,6 @@ class TestDataSeeder extends Seeder
             ['Queixas', 15],
         ]);
         $this->command->info('📋 Login Admin: admin@policia-viana.ao / Admin@2025');
-        $this->command->info('📋 Login Agentes: *@policia-viana.ao / Agente@2025');
+        $this->command->info('📋 Login Agentes: *@policia-viana.ao / ' . config('auth.default_agent_password'));
     }
 }

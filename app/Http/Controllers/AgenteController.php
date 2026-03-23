@@ -41,7 +41,7 @@ class AgenteController extends Controller
         return DB::transaction(function () use ($request) {
             $user = User::create([
                 'email' => $request->email,
-                'password' => Hash::make('Agente@' . date('Y')),
+                'password' => Hash::make(config('auth.default_agent_password')),
                 'perfil_id' => $request->perfil_id,
                 'estado' => $request->estado,
             ]);
