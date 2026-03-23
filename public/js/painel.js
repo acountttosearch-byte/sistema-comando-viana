@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════
    SCGD VIANA — JS REFATORIZADO
    Formulários no main · Validação completa
-   Sem modais para registos · Design institucional
    ═══════════════════════════════════════════════════ */
 
 let aux = {};
@@ -260,7 +259,7 @@ function formNovaOcorrencia() {
                 <div class="form-col"><label>Prioridade *</label>${mkOpts('noc-prio', [{ v: 'baixa', t: 'Baixa' }, { v: 'media', t: 'Media' }, { v: 'alta', t: 'Alta' }, { v: 'critica', t: 'Critica' }])}</div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Data da Ocorrencia *</label><input type="date" id="noc-data" value="${today()}" max="${today()}"><span class="form-hint">Nao pode ser uma data futura</span></div>
+                <div class="form-col"><label>Data da Ocorrencia *</label><input type="date" id="noc-data" value="${today()}" max="${today()}"><span class="form-hint">Data válida</span></div>
                 <div class="form-col"><label>Hora</label><input type="time" id="noc-hora"></div>
             </div>
             <div class="form-row">
@@ -494,15 +493,15 @@ function formNovaPessoa(retOcId = null) {
         <div class="form-card">
             <div class="form-section">Identificacao</div>
             <div class="form-row">
-                <div class="form-col"><label>Nome Completo *</label><input type="text" id="npes-nome"><span class="form-hint">Sem numeros ou caracteres especiais</span></div>
+                <div class="form-col"><label>Nome Completo *</label><input type="text" id="npes-nome"><span class="form-hint"></span></div>
                 <div class="form-col"><label>Alcunha</label><input type="text" id="npes-alcunha"></div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Bilhete de Identidade</label><input type="text" id="npes-bi" placeholder="Ex: 0012345678LA042"><span class="form-hint">Formato angolano, unico</span></div>
+                <div class="form-col"><label>Bilhete de Identidade</label><input type="text" id="npes-bi" placeholder="Ex: 0012345678LA042"><span class="form-hint">Digite o numero do BI válido</span></div>
                 <div class="form-col"><label>Sexo</label>${mkOpts('npes-sexo', [{ v: 'M', t: 'Masculino' }, { v: 'F', t: 'Feminino' }], false)}</div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Data de Nascimento</label><input type="date" id="npes-nasc" max="${today()}"><span class="form-hint">Nao pode ser no futuro</span></div>
+                <div class="form-col"><label>Data de Nascimento</label><input type="date" id="npes-nasc" max="${today()}"><span class="form-hint"></span></div>
                 <div class="form-col"><label>Nacionalidade</label><input type="text" id="npes-nac" value="Angolana"></div>
             </div>
             <div class="form-section">Contacto</div>
