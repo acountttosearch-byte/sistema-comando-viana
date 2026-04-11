@@ -570,7 +570,7 @@ TOTAL: 68 Endpoints API + 5 Rotas Web = 73 rotas
     Métodos:
     • index(Request)           - Lista mandados
     • store(Request)           - Emite mandado
-    • actualizarEstado(Request) - Atualiza estado
+    • actualizarEstado(Request) - Atualiza estado\\
     
     Tipos:
     • Busca e apreensão
