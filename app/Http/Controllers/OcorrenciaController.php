@@ -14,10 +14,20 @@ class OcorrenciaController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $perfil = $user->perfil->nome;
+        $agenteId = $user->agente?->id;
         $q = Ocorrencia::with(['tipoCrime', 'estado', 'agenteResponsavel', 'unidade']);
 
-        if (!$user->isAdmin() && !$user->isComandante()) {
+        // RBAC: filtrar por perfil
+        if (in_array($perfil, ['admin', 'comandante'])) {
+            // visão global — sem filtro
+        } elseif ($perfil === 'chefe_esquadra') {
             $q->where('unidade_id', $user->unidade_id);
+        } else {
+            // investigador, agente, operador — apenas dados próprios
+            if ($agenteId) {
+                $q->where(fn($q2) => $q2->where('agente_registo_id', $agenteId)->orWhere('agente_responsavel_id', $agenteId));
+            }
         }
 
         if ($request->filled('estado_id')) $q->where('estado_id', $request->estado_id);
@@ -25,7 +35,7 @@ class OcorrenciaController extends Controller
         if ($request->filled('tipo_crime_id')) $q->where('tipo_crime_id', $request->tipo_crime_id);
         if ($request->filled('data_inicio')) $q->where('data_ocorrencia', '>=', $request->data_inicio);
         if ($request->filled('data_fim')) $q->where('data_ocorrencia', '<=', $request->data_fim);
-        if ($request->filled('unidade_id') && ($user->isAdmin() || $user->isComandante())) {
+        if ($request->filled('unidade_id') && in_array($perfil, ['admin', 'comandante'])) {
             $q->where('unidade_id', $request->unidade_id);
         }
         if ($request->filled('busca')) {
@@ -97,6 +107,17 @@ class OcorrenciaController extends Controller
 
     public function update(Request $request, Ocorrencia $ocorrencia)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
+        $agenteId = $user->agente?->id;
+
+        // Apenas admin, comandante, chefe_esquadra ou o agente responsável podem editar
+        if (!in_array($perfil, ['admin', 'comandante', 'chefe_esquadra'])) {
+            if ($ocorrencia->agente_responsavel_id !== $agenteId && $ocorrencia->agente_registo_id !== $agenteId) {
+                return response()->json(['error' => 'Sem permissão para editar esta ocorrência.'], 403);
+            }
+        }
+
         $ocorrencia->update($request->only(['descricao', 'prioridade', 'estado_id', 'agente_responsavel_id', 'local', 'bairro']));
         Log::registar('editar', 'ocorrencias', $ocorrencia->id, "Ocorrência actualizada");
         return response()->json(['success' => true, 'message' => 'Actualizada.', 'ocorrencia' => $ocorrencia->fresh(['tipoCrime', 'estado', 'unidade'])]);

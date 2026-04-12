@@ -11,15 +11,35 @@ class PatrulhaController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
         $q = Patrulha::with(['turno', 'zona', 'viatura', 'agenteLider', 'unidade', 'agentes']);
+
+        // RBAC
+        if (in_array($perfil, ['admin', 'comandante'])) {
+            // visão global
+        } elseif ($perfil === 'chefe_esquadra') {
+            $q->where('unidade_id', $user->unidade_id);
+        }
+
         if ($request->filled('data')) $q->where('data', $request->data);
-        if ($request->filled('unidade_id')) $q->where('unidade_id', $request->unidade_id);
+        if ($request->filled('unidade_id') && in_array($perfil, ['admin', 'comandante'])) {
+            $q->where('unidade_id', $request->unidade_id);
+        }
         if ($request->filled('estado')) $q->where('estado', $request->estado);
         return response()->json($q->orderByDesc('data')->paginate(20));
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
+
+        // Apenas admin, comandante, chefe_esquadra podem criar patrulhas
+        if (!in_array($perfil, ['admin', 'comandante', 'chefe_esquadra'])) {
+            return response()->json(['error' => 'Sem permissão para registar patrulhas.'], 403);
+        }
+
         $request->validate([
             'data' => 'required|date',
             'turno_id' => 'required|exists:turnos,id',

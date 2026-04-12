@@ -182,7 +182,12 @@ async function loadAux() {
     fillSel('f-oc-estado', aux.estados_ocorrencia, 'id', 'nome', 'Todos os estados');
     fillSel('f-oc-tipo', aux.tipos_crime, 'id', 'nome', 'Todos os tipos');
     fillSel('f-det-estado', aux.estados_detencao, 'id', 'nome', 'Todos');
+    fillSel('f-det-unidade', aux.unidades, 'id', 'nome', 'Unidade');
     fillSel('f-inv-estado', aux.estados_investigacao, 'id', 'nome', 'Todos');
+    fillSel('f-arm-tipo', aux.tipos_armamento, 'id', 'nome', 'Tipo');
+    fillSel('f-arm-unidade', aux.unidades, 'id', 'nome', 'Unidade');
+    fillSel('f-viat-unidade', aux.unidades, 'id', 'nome', 'Unidade');
+    fillSel('f-pat-unidade', aux.unidades, 'id', 'nome', 'Unidade');
     fillSel('ag-unidade', aux.unidades, 'id', 'nome', 'Selecionar');
     fillSel('ag-patente', aux.patentes, 'id', 'nome', 'Selecionar');
     fillSel('ag-perfil', aux.perfis, 'id', 'descricao', 'Selecionar');
@@ -465,7 +470,8 @@ async function submitEnvolvido(ocId) {
 // PESSOAS
 // ══════════════════
 async function loadPessoas(page = 1) {
-    const d = await api('/pessoas?page=' + page + '&busca=' + v('f-pes-busca')); if (!d) return;
+    const p = new URLSearchParams({ page, busca: v('f-pes-busca'), sexo: v('f-pes-sexo'), nacionalidade: v('f-pes-nacionalidade') });
+    const d = await api('/pessoas?' + p); if (!d) return;
     const items = d.data || []; const c = document.getElementById('list-pes');
     if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; }
     c.innerHTML = items.map(p => `<div class="tbl-row" onclick="viewPessoa(${p.id})"><div class="col c2"><strong>${p.nome}</strong>${p.alcunha ? ` <small class="text-muted">(${p.alcunha})</small>` : ''}</div><div class="col c1">${p.bi || '-'}</div><div class="col c1">${p.sexo || '-'}</div><div class="col c1">${p.telefone || '-'}</div><div class="col c2">${p.morada || '-'}</div><div class="col c1"><button class="btn-icon"><i class='bx bx-show'></i></button></div></div>`).join('');
@@ -542,12 +548,35 @@ async function submitNovaPessoa(retOcId) {
 // DETENCOES
 // ══════════════════
 async function loadDetencoes(page = 1) {
-    const p = new URLSearchParams({ page, estado_id: v('f-det-estado'), data_inicio: v('f-det-di'), data_fim: v('f-det-df') });
+    const p = new URLSearchParams({ page, estado_id: v('f-det-estado'), data_inicio: v('f-det-di'), data_fim: v('f-det-df'), busca: v('f-det-busca'), unidade_id: v('f-det-unidade') });
     const d = await api('/detencoes?' + p); if (!d) return;
     const items = d.data || []; const c = document.getElementById('list-det');
-    if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem detencoes.</div>'; return; }
-    c.innerHTML = items.map(dt => `<div class="tbl-row"><div class="col c2"><strong>${dt.numero_detencao}</strong></div><div class="col c2">${dt.pessoa?.nome || '-'}</div><div class="col c2">${dt.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c1">${fDT(dt.data_detencao)}</div><div class="col c1">${bGen(dt.estado?.nome)}</div><div class="col c1"><button class="btn-icon"><i class='bx bx-show'></i></button></div></div>`).join('');
+    if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem detenções.</div>'; return; }
+    c.innerHTML = items.map(dt => `<div class="tbl-row" onclick="viewDetencao(${dt.id})"><div class="col c2"><strong>${dt.numero_detencao}</strong></div><div class="col c2">${dt.pessoa?.nome || '-'}</div><div class="col c2">${dt.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c1">${fDT(dt.data_detencao)}</div><div class="col c1">${bGen(dt.estado?.nome)}</div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewDetencao(${dt.id})"><i class='bx bx-show'></i></button></div></div>`).join('');
     renderPag('pag-det', d, loadDetencoes);
+}
+async function viewDetencao(id) {
+    showLoad(); const dt = await api('/detencoes/' + id); hideLoad(); if (!dt) return;
+    let h = `<div class="page-header"><div><h1 class="page-title">Detenção ${dt.numero_detencao}</h1><p class="page-desc">Detido em ${fDT(dt.data_detencao)}</p></div>
+        <button class="btn-ghost" onclick="voltarPara('detencoes')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+        <div class="detail-view">
+        <div class="detail-sect"><h4>Dados da Detenção</h4>
+            ${dl('Número', dt.numero_detencao)}${dl('Data', fDT(dt.data_detencao))}${dl('Local', dt.local_detencao)}
+            ${dl('Motivo', dt.motivo)}${dl('Estado', bGen(dt.estado?.nome))}${dl('Observações', dt.observacoes)}
+        </div>
+        <div class="detail-sect"><h4>Detido</h4>
+            ${dl('Nome', dt.pessoa?.nome)}${dl('BI', dt.pessoa?.bi)}${dl('Sexo', dt.pessoa?.sexo === 'M' ? 'Masculino' : dt.pessoa?.sexo === 'F' ? 'Feminino' : '-')}
+            ${dl('Telefone', dt.pessoa?.telefone)}${dl('Morada', dt.pessoa?.morada)}
+        </div>
+        <div class="detail-sect"><h4>Ocorrência Associada</h4>
+            ${dl('Número', dt.ocorrencia?.numero_ocorrencia)}${dl('Tipo', dt.ocorrencia?.tipo_crime?.nome)}
+            <button class="link-btn" onclick="viewOcorrencia(${dt.ocorrencia?.id})">Ver Ocorrência Completa</button>
+        </div>
+        <div class="detail-sect"><h4>Agente Responsável</h4>
+            ${dl('Nome', dt.agente_responsavel?.nome)}${dl('Unidade', dt.unidade?.nome)}
+        </div>
+    </div>`;
+    renderMain('detencoes', h);
 }
 
 function formNovaDetencao() {
@@ -583,27 +612,85 @@ async function submitNovaDetencao() {
 // EVIDENCIAS / INVESTIGACOES / DESPACHOS / PATRULHAS / ALERTAS / VIATURAS / ARMAMENTO / MENSAGENS
 // (listagem funciona igual, formularios no main)
 // ══════════════════
-async function loadEvidencias(page = 1, tipo = 'todos') { const p = new URLSearchParams({ page }); if (tipo && tipo !== 'todos') p.append('tipo_evidencia_id', tipo); const d = await api('/evidencias?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-ev'); const icos = { 1: 'bx-image', 2: 'bx-video', 3: 'bx-file', 4: 'bx-microphone', 5: 'bx-box' }; if (!items.length) { c.innerHTML = '<div class="tbl-empty" style="grid-column:1/-1;">Sem evidencias.</div>'; return; } c.innerHTML = items.map(e => `<div class="ev-card"><div class="ev-icon"><i class='bx ${icos[e.tipo_evidencia_id] || 'bx-file'}'></i></div><div class="ev-name">${e.descricao}</div><div class="ev-meta">${e.codigo} - ${e.tipo_evidencia?.nome || ''}</div><div class="ev-meta">${bGen(e.estado)}</div></div>`).join(''); }
+let evTipoActual = 'todos';
+async function loadEvidencias(page = 1, tipo) { if (tipo !== undefined) evTipoActual = tipo; const p = new URLSearchParams({ page, busca: v('f-ev-busca'), estado: v('f-ev-estado') }); if (evTipoActual && evTipoActual !== 'todos') p.append('tipo_evidencia_id', evTipoActual); const d = await api('/evidencias?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-ev'); const icos = { 1: 'bx-image', 2: 'bx-video', 3: 'bx-file', 4: 'bx-microphone', 5: 'bx-box' }; if (!items.length) { c.innerHTML = '<div class="tbl-empty" style="grid-column:1/-1;">Sem evidências.</div>'; return; } c.innerHTML = items.map(e => `<div class="ev-card" onclick="viewEvidencia(${e.id})" style="cursor:pointer;"><div class="ev-icon"><i class='bx ${icos[e.tipo_evidencia_id] || 'bx-file'}'></i></div><div class="ev-name">${e.descricao}</div><div class="ev-meta">${e.codigo} - ${e.tipo_evidencia?.nome || ''}</div><div class="ev-meta">${bGen(e.estado)}</div>${e.ficheiro ? '<div class="ev-meta"><i class="bx bx-paperclip"></i> Ficheiro</div>' : ''}</div>`).join(''); renderPag('pag-ev', d, loadEvidencias); }
 function filtEv(tipo, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } loadEvidencias(1, tipo); }
+async function viewEvidencia(id) {
+    showLoad(); const e = await api('/evidencias/' + id); hideLoad(); if (!e) return;
+    let h = `<div class="page-header"><div><h1 class="page-title">Evidência ${e.codigo}</h1><p class="page-desc">${e.tipo_evidencia?.nome || ''}</p></div>
+        <button class="btn-ghost" onclick="voltarPara('evidencias')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+        <div class="detail-view">
+        <div class="detail-sect"><h4>Dados da Evidência</h4>
+            ${dl('Código', e.codigo)}${dl('Tipo', e.tipo_evidencia?.nome)}${dl('Descrição', e.descricao)}
+            ${dl('Estado', bGen(e.estado))}${dl('Localização Física', e.localizacao_fisica)}
+            ${dl('Registado por', e.agente_registo?.nome)}
+            ${e.ficheiro ? `<div style="margin-top:12px;"><a href="/api/evidencias/${e.id}/ficheiro" target="_blank" class="btn-primary btn-sm"><i class='bx bx-download'></i> Ver/Descarregar Ficheiro</a></div>` : ''}
+        </div>
+        <div class="detail-sect"><h4>Ocorrência Associada</h4>
+            ${dl('Número', e.ocorrencia?.numero_ocorrencia)}${dl('Tipo', e.ocorrencia?.tipo_crime?.nome)}${dl('Unidade', e.ocorrencia?.unidade?.nome)}
+            <button class="link-btn" onclick="viewOcorrencia(${e.ocorrencia?.id})">Ver Ocorrência</button>
+        </div>`;
+    if (e.cadeia_custodia?.length) {
+        h += '<div class="detail-sect"><h4>Cadeia de Custódia</h4><div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c2">De</div><div class="col c2">Para</div><div class="col c2">Local</div><div class="col c1">Data</div></div>';
+        e.cadeia_custodia.forEach(cc => h += `<div class="tbl-row"><div class="col c2">${cc.agente_origem?.nome || '-'}</div><div class="col c2">${cc.agente_destino?.nome || '-'}</div><div class="col c2">${cc.local_destino || '-'}</div><div class="col c1">${fDT(cc.data_transferencia)}</div></div>`);
+        h += '</div></div>';
+    }
+    h += '</div>';
+    renderMain('evidencias', h);
+}
 
-async function loadInvestigacoes() { const d = await api('/investigacoes?estado_id=' + v('f-inv-estado')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-inv'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(i => `<div class="tbl-row"><div class="col c2"><strong>${i.numero_investigacao}</strong></div><div class="col c1">${i.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c2"><span style="font-size:11px;">${i.progresso}%</span><div class="progress-track"><div class="progress-fill" style="width:${i.progresso}%"></div></div></div><div class="col c1">${bEstadoObj(i.estado)}</div><div class="col c1"><button class="btn-icon"><i class='bx bx-show'></i></button></div></div>`).join(''); }
+async function loadInvestigacoes() { const p = new URLSearchParams({ estado_id: v('f-inv-estado'), busca: v('f-inv-busca'), data_inicio: v('f-inv-di'), data_fim: v('f-inv-df') }); const d = await api('/investigacoes?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-inv'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(i => `<div class="tbl-row"><div class="col c2"><strong>${i.numero_investigacao}</strong></div><div class="col c1">${i.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c2"><span style="font-size:11px;">${i.progresso}%</span><div class="progress-track"><div class="progress-fill" style="width:${i.progresso}%"></div></div></div><div class="col c1">${bEstadoObj(i.estado)}</div><div class="col c1"><button class="btn-icon"><i class='bx bx-show'></i></button></div></div>`).join(''); }
 
 async function loadDespachos() { const d = await api('/despachos?estado=' + v('f-desp-estado')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-desp'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(dp => `<div class="tbl-row"><div class="col c2">${dp.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c1">${bPrio(dp.prioridade)}</div><div class="col c2">${dp.agente_destino?.nome || '-'}</div><div class="col c1">${dp.unidade?.nome || '-'}</div><div class="col c1">${bGen(dp.estado)}</div><div class="col c1">${fDT(dp.data_despacho)}</div><div class="col c1">${dp.estado === 'pendente' ? `<button class="btn-primary btn-sm" onclick="respDesp(${dp.id})">Aceitar</button>` : ''}</div></div>`).join(''); }
 async function respDesp(id) { const d = await api(`/despachos/${id}/responder`, { method: 'PATCH', body: JSON.stringify({ estado: 'aceite' }) }); if (d?.success) { toast('Despacho aceite.', 'ok'); loadDespachos(); } }
 
-async function loadPatrulhas() { const d = await api('/patrulhas?data=' + v('f-pat-data') + '&estado=' + v('f-pat-estado')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-pat'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(p => `<div class="tbl-row"><div class="col c1">${fDate(p.data)}</div><div class="col c1">${p.turno?.nome || '-'}</div><div class="col c2">${p.zona?.nome || '-'}</div><div class="col c2">${p.agente_lider?.nome || '-'}</div><div class="col c1">${p.viatura?.matricula || '-'}</div><div class="col c1">${bGen(p.estado)}</div><div class="col c1">${p.estado === 'planeada' ? `<button class="btn-primary btn-sm" onclick="patEst(${p.id},'em_curso')">Iniciar</button>` : p.estado === 'em_curso' ? `<button class="btn-ghost btn-sm" onclick="patEst(${p.id},'concluida')">Concluir</button>` : ''}</div></div>`).join(''); }
+async function loadPatrulhas() { const pp = new URLSearchParams({ data: v('f-pat-data'), estado: v('f-pat-estado'), unidade_id: v('f-pat-unidade') }); const d = await api('/patrulhas?' + pp); if (!d) return; const items = d.data || []; const c = document.getElementById('list-pat'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(p => `<div class="tbl-row"><div class="col c1">${fDate(p.data)}</div><div class="col c1">${p.turno?.nome || '-'}</div><div class="col c2">${p.zona?.nome || '-'}</div><div class="col c2">${p.agente_lider?.nome || '-'}</div><div class="col c1">${p.viatura?.matricula || '-'}</div><div class="col c1">${bGen(p.estado)}</div><div class="col c1">${p.estado === 'planeada' ? `<button class="btn-primary btn-sm" onclick="patEst(${p.id},'em_curso')">Iniciar</button>` : p.estado === 'em_curso' ? `<button class="btn-ghost btn-sm" onclick="patEst(${p.id},'concluida')">Concluir</button>` : ''}</div></div>`).join(''); }
 async function patEst(id, est) { const d = await api(`/patrulhas/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ estado: est }) }); if (d?.success) { toast('Estado actualizado.', 'ok'); loadPatrulhas(); } }
 
 async function loadAlertas(estado, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } const d = await api('/alertas?estado=' + estado); if (!d) return; const items = d.data || []; const c = document.getElementById('list-alertas'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem alertas.</div>'; return; } c.innerHTML = items.map(a => `<div class="alert-card ${a.prioridade}"><div class="alert-ico"><i class='bx ${a.tipo_alerta?.icone || 'bx-bell-ring'}'></i></div><div class="alert-info"><h4>${a.titulo}</h4><p>${a.descricao.substring(0, 200)}${a.descricao.length > 200 ? '...' : ''}</p><div class="alert-meta">${bPrio(a.prioridade)} - ${a.tipo_alerta?.nome || ''} - ${fDT(a.created_at)}</div></div><div>${a.estado === 'activo' ? `<button class="btn-success btn-sm" onclick="resolveAlerta(${a.id})">Resolver</button>` : `<span class="badge badge-gray">${a.estado}</span>`}</div></div>`).join(''); }
 async function resolveAlerta(id) { const d = await api(`/alertas/${id}/resolver`, { method: 'PATCH' }); if (d?.success) { toast('Alerta resolvido.', 'ok'); loadAlertas('activo'); loadDashboard(); } }
 
-async function loadViaturas() { const d = await api('/viaturas'); if (!d) return; const c = document.getElementById('list-viat'); if (!d.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = d.map(vi => `<div class="tbl-row"><div class="col c1"><strong>${vi.matricula}</strong></div><div class="col c2">${vi.marca} ${vi.modelo}${vi.cor ? ' (' + vi.cor + ')' : ''}</div><div class="col c2">${vi.unidade?.nome || '-'}</div><div class="col c1">${(vi.quilometragem || 0).toLocaleString()} km</div><div class="col c1"><span class="badge badge-${vi.estado === 'operacional' ? 'green' : 'orange'}">${vi.estado}</span></div></div>`).join(''); }
+async function loadViaturas(page = 1) { const p = new URLSearchParams({ page, busca: v('f-viat-busca'), estado: v('f-viat-estado'), unidade_id: v('f-viat-unidade') }); const d = await api('/viaturas?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-viat'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(vi => `<div class="tbl-row" onclick="viewViatura(${vi.id})"><div class="col c1"><strong>${vi.matricula}</strong></div><div class="col c2">${vi.marca} ${vi.modelo}${vi.cor ? ' (' + vi.cor + ')' : ''}</div><div class="col c2">${vi.unidade?.nome || '-'}</div><div class="col c1">${(vi.quilometragem || 0).toLocaleString()} km</div><div class="col c1"><span class="badge badge-${vi.estado === 'disponivel' ? 'green' : vi.estado === 'em_uso' ? 'blue' : 'orange'}">${vi.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewViatura(${vi.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-viat', d, loadViaturas); }
+async function viewViatura(id) {
+    showLoad(); const vi = await api('/viaturas/' + id); hideLoad(); if (!vi) return;
+    let h = `<div class="page-header"><div><h1 class="page-title">${vi.matricula}</h1><p class="page-desc">${vi.marca} ${vi.modelo}</p></div>
+        <button class="btn-ghost" onclick="voltarPara('viaturas')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+        <div class="detail-view"><div class="detail-sect"><h4>Dados da Viatura</h4>
+            ${dl('Matrícula', vi.matricula)}${dl('Marca', vi.marca)}${dl('Modelo', vi.modelo)}${dl('Ano', vi.ano)}${dl('Cor', vi.cor)}
+            ${dl('Quilometragem', (vi.quilometragem || 0).toLocaleString() + ' km')}${dl('Estado', vi.estado)}${dl('Unidade', vi.unidade?.nome)}
+        </div>`;
+    if (vi.atribuicoes?.length) {
+        h += '<div class="detail-sect"><h4>Histórico de Atribuições</h4><div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c2">Agente</div><div class="col c1">Saída</div><div class="col c1">Retorno</div><div class="col c1">Km Saída</div><div class="col c1">Km Retorno</div></div>';
+        vi.atribuicoes.forEach(at => h += `<div class="tbl-row"><div class="col c2">${at.agente?.nome || '-'}</div><div class="col c1">${fDT(at.data_saida)}</div><div class="col c1">${at.data_retorno ? fDT(at.data_retorno) : '<span class="badge badge-blue">Em uso</span>'}</div><div class="col c1">${at.quilometragem_saida || '-'}</div><div class="col c1">${at.quilometragem_retorno || '-'}</div></div>`);
+        h += '</div></div>';
+    }
+    h += '</div>';
+    renderMain('viaturas', h);
+}
 
-async function loadArmamento() { const d = await api('/armamento'); if (!d) return; const c = document.getElementById('list-arm'); if (!d.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = d.map(a => `<div class="tbl-row"><div class="col c1"><strong>${a.numero_serie}</strong></div><div class="col c1">${a.tipo_armamento?.nome || '-'}</div><div class="col c1">${a.marca || ''} ${a.modelo || ''}</div><div class="col c1">${a.calibre || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c2">${a.atribuicao_actual?.agente?.nome || '<span class="text-muted">Disponivel</span>'}</div><div class="col c1"><span class="badge badge-${a.estado === 'operacional' ? 'green' : 'orange'}">${a.estado}</span></div></div>`).join(''); }
+async function loadArmamento(page = 1) { const p = new URLSearchParams({ page, busca: v('f-arm-busca'), estado: v('f-arm-estado'), tipo_armamento_id: v('f-arm-tipo'), unidade_id: v('f-arm-unidade') }); const d = await api('/armamento?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-arm'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(a => `<div class="tbl-row" onclick="viewArmamento(${a.id})"><div class="col c1"><strong>${a.numero_serie}</strong></div><div class="col c1">${a.tipo_armamento?.nome || '-'}</div><div class="col c1">${a.marca || '-'}</div><div class="col c1">${a.calibre || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c2">${a.atribuicao_actual?.agente?.nome || '<span class="text-muted">Disponível</span>'}</div><div class="col c1"><span class="badge badge-${a.estado === 'disponivel' ? 'green' : a.estado === 'atribuido' ? 'blue' : 'orange'}">${a.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewArmamento(${a.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-arm', d, loadArmamento); }
+async function viewArmamento(id) {
+    showLoad(); const a = await api('/armamento/' + id); hideLoad(); if (!a) return;
+    let h = `<div class="page-header"><div><h1 class="page-title">${a.numero_serie}</h1><p class="page-desc">${a.tipo_armamento?.nome || ''} - ${a.marca || ''} ${a.modelo || ''}</p></div>
+        <button class="btn-ghost" onclick="voltarPara('armamento')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+        <div class="detail-view"><div class="detail-sect"><h4>Dados do Armamento</h4>
+            ${dl('Nº Série', a.numero_serie)}${dl('Tipo', a.tipo_armamento?.nome)}${dl('Marca', a.marca)}${dl('Modelo', a.modelo)}
+            ${dl('Calibre', a.calibre)}${dl('Estado', a.estado)}${dl('Unidade', a.unidade?.nome)}
+            ${a.atribuicao_actual?.agente ? dl('Atribuído a', a.atribuicao_actual.agente.nome) : ''}
+        </div>`;
+    if (a.atribuicoes?.length) {
+        h += '<div class="detail-sect"><h4>Histórico de Atribuições</h4><div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c2">Agente</div><div class="col c1">Atribuição</div><div class="col c1">Devolução</div><div class="col c1">Estado</div></div>';
+        a.atribuicoes.forEach(at => h += `<div class="tbl-row"><div class="col c2">${at.agente?.nome || '-'}</div><div class="col c1">${fDT(at.data_atribuicao)}</div><div class="col c1">${at.data_devolucao ? fDT(at.data_devolucao) : '-'}</div><div class="col c1">${bGen(at.estado)}</div></div>`);
+        h += '</div></div>';
+    }
+    h += '</div>';
+    renderMain('armamento', h);
+}
 
 async function loadMensagens(tipo, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } const d = await api('/mensagens/' + (tipo === 'inbox' ? 'inbox' : 'enviadas')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-msg'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem mensagens.</div>'; return; } c.innerHTML = items.map(m => `<div class="tbl-row" style="${!m.lida ? 'font-weight:600;background:var(--navy-light);' : ''}"><div class="col c0">${!m.lida ? '<i class="bx bxs-circle" style="color:var(--navy);font-size:7px;"></i>' : ''}</div><div class="col c2">${tipo === 'inbox' ? (m.remetente?.nome || '-') : (m.destinatario?.nome || '-')}</div><div class="col c3">${m.titulo}</div><div class="col c1">${m.prioridade === 'urgente' ? '<span class="badge badge-red">Urgente</span>' : '<span class="badge badge-gray">Normal</span>'}</div><div class="col c1">${fDT(m.created_at)}</div></div>`).join(''); }
 
-async function loadRelatorios() { const d = await api('/relatorios'); if (!d) return; const items = d.data || []; const c = document.getElementById('list-rel'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem relatorios.</div>'; return; } c.innerHTML = items.map(r => `<div class="tbl-row"><div class="col c2">${r.tipo_relatorio?.nome || '-'}</div><div class="col c2">${fDate(r.periodo_inicio)} - ${fDate(r.periodo_fim)}</div><div class="col c2">${r.unidade?.nome || 'Todas'}</div><div class="col c1">${fDate(r.created_at)}</div></div>`).join(''); }
+async function loadRelatorios() { loadRelatoriosAnteriores(); }
+async function loadRelatoriosAnteriores() { const p = new URLSearchParams({ busca: v('f-rel-busca') }); const d = await api('/relatorios?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-rel'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem relatórios.</div>'; return; } c.innerHTML = items.map(r => `<div class="tbl-row"><div class="col c2">${r.tipo_relatorio?.nome || '-'}</div><div class="col c2">${fDate(r.periodo_inicio)} - ${fDate(r.periodo_fim)}</div><div class="col c2">${r.unidade?.nome || 'Todas'}</div><div class="col c1">${fDate(r.created_at)}</div></div>`).join(''); }
 // ══════════════════
 // RELATORIOS — CORRIGIDO
 // ══════════════════

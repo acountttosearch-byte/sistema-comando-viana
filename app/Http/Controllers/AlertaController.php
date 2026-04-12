@@ -42,7 +42,7 @@ class AlertaController extends Controller
             AlertaDestinatario::create(['alerta_id' => $alerta->id, 'unidade_id' => $uid]);
         }
 
-        Log::registar('criar', 'alertas', $alerta->id, "Alerta BOLO emitido");
+        Log::registar('criar', 'alertas', $alerta->id, "Alerta emitido");
         return response()->json(['success' => true, 'alerta' => $alerta], 201);
     }
 

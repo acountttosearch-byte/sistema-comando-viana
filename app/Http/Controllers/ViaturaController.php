@@ -11,10 +11,27 @@ class ViaturaController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
         $q = Viatura::with('unidade');
-        if ($request->filled('unidade_id')) $q->where('unidade_id', $request->unidade_id);
+
+        // RBAC: apenas admin/comandante/chefe_esquadra
+        if ($perfil === 'chefe_esquadra') {
+            $q->where('unidade_id', $user->unidade_id);
+        }
+
+        if ($request->filled('unidade_id') && in_array($perfil, ['admin', 'comandante'])) {
+            $q->where('unidade_id', $request->unidade_id);
+        }
         if ($request->filled('estado')) $q->where('estado', $request->estado);
-        return response()->json($q->orderBy('matricula')->get());
+        if ($request->filled('busca')) {
+            $b = $request->busca;
+            $q->where(fn($q2) => $q2->where('matricula', 'like', "%$b%")
+                ->orWhere('marca', 'like', "%$b%")
+                ->orWhere('modelo', 'like', "%$b%"));
+        }
+
+        return response()->json($q->orderBy('matricula')->paginate($request->per_page ?? 20));
     }
 
     public function store(Request $request)
@@ -28,6 +45,13 @@ class ViaturaController extends Controller
         $v = Viatura::create($request->all());
         Log::registar('criar', 'viaturas', $v->id, "Viatura {$v->matricula} registada");
         return response()->json(['success' => true, 'viatura' => $v], 201);
+    }
+
+    public function show(Viatura $viatura)
+    {
+        return response()->json($viatura->load([
+            'unidade', 'atribuicoes.agente', 'manutencoes'
+        ]));
     }
 
     public function atribuir(Request $request, Viatura $viatura)

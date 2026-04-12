@@ -10,13 +10,22 @@ use Illuminate\Http\Request;
 
 class RelatorioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(
-            Relatorio::with(['tipoRelatorio', 'geradoPor', 'unidade'])
-                ->orderByDesc('created_at')
-                ->paginate(20)
-        );
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
+        $q = Relatorio::with(['tipoRelatorio', 'geradoPor', 'unidade']);
+
+        if ($perfil === 'chefe_esquadra') {
+            $q->where('unidade_id', $user->unidade_id);
+        }
+
+        if ($request->filled('busca')) {
+            $b = $request->busca;
+            $q->where(fn($q2) => $q2->whereHas('tipoRelatorio', fn($q3) => $q3->where('nome', 'like', "%$b%")));
+        }
+
+        return response()->json($q->orderByDesc('created_at')->paginate(20));
     }
 
     public function gerar(Request $request)

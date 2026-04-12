@@ -69,6 +69,8 @@ Route::middleware('auth:web')->group(function () {
     // Evidências
     Route::get('/evidencias', [EvidenciaController::class, 'index']);
     Route::post('/evidencias', [EvidenciaController::class, 'store']);
+    Route::get('/evidencias/{evidencia}', [EvidenciaController::class, 'show']);
+    Route::get('/evidencias/{evidencia}/ficheiro', [EvidenciaController::class, 'ficheiro']);
     Route::post('/evidencias/{evidencia}/transferir', [EvidenciaController::class, 'transferirCustodia']);
     Route::get('/evidencias/{evidencia}/custodia', [EvidenciaController::class, 'historicoCustodia']);
 
@@ -98,12 +100,14 @@ Route::middleware('auth:web')->group(function () {
 
     // Viaturas
     Route::get('/viaturas', [ViaturaController::class, 'index']);
+    Route::get('/viaturas/{viatura}', [ViaturaController::class, 'show']);
     Route::post('/viaturas', [ViaturaController::class, 'store']);
     Route::post('/viaturas/{viatura}/atribuir', [ViaturaController::class, 'atribuir']);
     Route::patch('/viatura-atribuicoes/{atribuicao}/devolver', [ViaturaController::class, 'devolver']);
 
     // Armamento
     Route::get('/armamento', [ArmamentoController::class, 'index']);
+    Route::get('/armamento/{armamento}', [ArmamentoController::class, 'show']);
     Route::post('/armamento', [ArmamentoController::class, 'store']);
     Route::post('/armamento/{armamento}/atribuir', [ArmamentoController::class, 'atribuir']);
     Route::patch('/armamento/{armamento}/devolver', [ArmamentoController::class, 'devolver']);

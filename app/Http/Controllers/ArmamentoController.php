@@ -11,10 +11,29 @@ class ArmamentoController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
         $q = Armamento::with(['tipoArmamento', 'unidade', 'atribuicaoActual.agente']);
-        if ($request->filled('unidade_id')) $q->where('unidade_id', $request->unidade_id);
+
+        // RBAC: apenas admin/comandante/chefe_esquadra
+        if ($perfil === 'chefe_esquadra') {
+            $q->where('unidade_id', $user->unidade_id);
+        }
+
+        if ($request->filled('unidade_id') && in_array($perfil, ['admin', 'comandante'])) {
+            $q->where('unidade_id', $request->unidade_id);
+        }
         if ($request->filled('estado')) $q->where('estado', $request->estado);
-        return response()->json($q->orderBy('numero_serie')->get());
+        if ($request->filled('tipo_armamento_id')) $q->where('tipo_armamento_id', $request->tipo_armamento_id);
+        if ($request->filled('busca')) {
+            $b = $request->busca;
+            $q->where(fn($q2) => $q2->where('numero_serie', 'like', "%$b%")
+                ->orWhere('marca', 'like', "%$b%")
+                ->orWhere('modelo', 'like', "%$b%")
+                ->orWhere('calibre', 'like', "%$b%"));
+        }
+
+        return response()->json($q->orderBy('numero_serie')->paginate($request->per_page ?? 20));
     }
 
     public function store(Request $request)
@@ -27,6 +46,14 @@ class ArmamentoController extends Controller
         $a = Armamento::create($request->all());
         Log::registar('criar', 'armamento', $a->id, "Armamento registado");
         return response()->json(['success' => true, 'armamento' => $a], 201);
+    }
+
+    public function show(Armamento $armamento)
+    {
+        return response()->json($armamento->load([
+            'tipoArmamento', 'unidade', 'atribuicaoActual.agente',
+            'atribuicoes.agente'
+        ]));
     }
 
     public function atribuir(Request $request, Armamento $armamento)

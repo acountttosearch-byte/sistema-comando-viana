@@ -15,6 +15,13 @@ class InvestigacaoController extends Controller
         $q = Investigacao::with(['ocorrencia.tipoCrime', 'investigador', 'estado']);
         if ($user->temPerfil('investigador')) $q->where('investigador_id', $user->agente->id);
         if ($request->filled('estado_id')) $q->where('estado_id', $request->estado_id);
+        if ($request->filled('investigador_id')) $q->where('investigador_id', $request->investigador_id);
+        if ($request->filled('data_inicio')) $q->where('data_inicio', '>=', $request->data_inicio);
+        if ($request->filled('data_fim')) $q->where('data_inicio', '<=', $request->data_fim);
+        if ($request->filled('busca')) {
+            $b = $request->busca;
+            $q->where(fn($q2) => $q2->where('numero_investigacao', 'like', "%$b%")->orWhere('resumo', 'like', "%$b%"));
+        }
         return response()->json($q->orderByDesc('created_at')->paginate(20));
     }
 

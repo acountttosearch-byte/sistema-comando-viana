@@ -6,15 +6,35 @@ use App\Models\Evidencia;
 use App\Models\CadeiaCustodia;
 use App\Models\Log;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EvidenciaController extends Controller
 {
     public function index(Request $request)
     {
-        $q = Evidencia::with(['ocorrencia', 'tipoEvidencia', 'agenteRegisto']);
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
+        $agenteId = $user->agente?->id;
+        $q = Evidencia::with(['ocorrencia.unidade', 'tipoEvidencia', 'agenteRegisto']);
+
+        // RBAC
+        if (in_array($perfil, ['admin', 'comandante'])) {
+            // visão global
+        } elseif ($perfil === 'chefe_esquadra') {
+            $q->whereHas('ocorrencia', fn($q2) => $q2->where('unidade_id', $user->unidade_id));
+        } else {
+            if ($agenteId) $q->where('agente_registo_id', $agenteId);
+        }
+
         if ($request->filled('ocorrencia_id')) $q->where('ocorrencia_id', $request->ocorrencia_id);
         if ($request->filled('tipo_evidencia_id')) $q->where('tipo_evidencia_id', $request->tipo_evidencia_id);
-        return response()->json($q->orderByDesc('created_at')->paginate(20));
+        if ($request->filled('estado')) $q->where('estado', $request->estado);
+        if ($request->filled('busca')) {
+            $b = $request->busca;
+            $q->where(fn($q2) => $q2->where('codigo', 'like', "%$b%")->orWhere('descricao', 'like', "%$b%"));
+        }
+
+        return response()->json($q->orderByDesc('created_at')->paginate($request->per_page ?? 20));
     }
 
     public function store(Request $request)
@@ -47,6 +67,23 @@ class EvidenciaController extends Controller
         $ev = Evidencia::create($dados);
         Log::registar('criar', 'evidencias', $ev->id, "Evidência {$ev->codigo} registada");
         return response()->json(['success' => true, 'message' => 'Evidência registada.', 'evidencia' => $ev->load('tipoEvidencia')], 201);
+    }
+
+    public function show(Evidencia $evidencia)
+    {
+        return response()->json($evidencia->load([
+            'ocorrencia.tipoCrime', 'ocorrencia.unidade', 'tipoEvidencia',
+            'agenteRegisto', 'cadeiaCustodia.agenteOrigem', 'cadeiaCustodia.agenteDestino'
+        ]));
+    }
+
+    public function ficheiro(Evidencia $evidencia)
+    {
+        if (!$evidencia->ficheiro || !Storage::disk('local')->exists($evidencia->ficheiro)) {
+            return response()->json(['error' => 'Ficheiro não encontrado.'], 404);
+        }
+        $path = Storage::disk('local')->path($evidencia->ficheiro);
+        return response()->file($path);
     }
 
     public function transferirCustodia(Request $request, Evidencia $evidencia)

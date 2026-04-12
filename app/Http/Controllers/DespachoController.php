@@ -11,14 +11,35 @@ class DespachoController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $perfil = $user->perfil->nome;
+        $agenteId = $user->agente?->id;
         $q = Despacho::with(['ocorrencia.tipoCrime', 'agenteDestino', 'agenteOrigem', 'unidade']);
-        if (!$user->isAdmin() && !$user->isComandante()) $q->where('despachado_para', $user->agente->id);
+
+        // RBAC: admin/comandante/chefe = visão ampla, outros = só despachos recebidos
+        if (in_array($perfil, ['admin', 'comandante'])) {
+            // visão global
+        } elseif ($perfil === 'chefe_esquadra') {
+            $q->where(fn($q2) => $q2->where('unidade_destino', $user->unidade_id)
+                ->orWhere('despachado_por', $agenteId));
+        } else {
+            // investigador, agente, operador — apenas despachos que lhe são destinados
+            if ($agenteId) $q->where('despachado_para', $agenteId);
+        }
+
         if ($request->filled('estado')) $q->where('estado', $request->estado);
         return response()->json($q->orderByDesc('data_despacho')->paginate(20));
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $perfil = $user->perfil->nome;
+
+        // Apenas admin, comandante, chefe_esquadra podem criar despachos
+        if (!in_array($perfil, ['admin', 'comandante', 'chefe_esquadra'])) {
+            return response()->json(['error' => 'Sem permissão para criar despachos.'], 403);
+        }
+
         $request->validate([
             'ocorrencia_id' => 'required|exists:ocorrencias,id',
             'prioridade' => 'required|in:baixa,media,alta,critica',

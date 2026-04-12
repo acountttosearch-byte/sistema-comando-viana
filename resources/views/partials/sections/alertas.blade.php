@@ -1,6 +1,6 @@
 <div id="section-alertas" class="section">
     <div class="page-header">
-        <div><h1 class="page-title">Alertas / BOLO</h1><p class="page-desc">Avisos de procura e emergencia</p></div>
+        <div><h1 class="page-title">Alertas</h1><p class="page-desc">Avisos de procura e emergência</p></div>
         <button class="btn-danger" onclick="formNovoAlerta()"><i class='bx bx-bell'></i> Emitir Alerta</button>
     </div>
     <div class="tabs-bar">

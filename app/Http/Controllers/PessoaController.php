@@ -15,6 +15,9 @@ class PessoaController extends Controller
             $b = $request->busca;
             $q->where(fn($q2) => $q2->where('nome', 'like', "%$b%")->orWhere('bi', 'like', "%$b%")->orWhere('alcunha', 'like', "%$b%"));
         }
+        if ($request->filled('sexo')) $q->where('sexo', $request->sexo);
+        if ($request->filled('nacionalidade')) $q->where('nacionalidade', $request->nacionalidade);
+        if ($request->filled('bairro')) $q->where('bairro', 'like', "%{$request->bairro}%");
         return response()->json($q->orderBy('nome')->paginate($request->per_page ?? 20));
     }
 
