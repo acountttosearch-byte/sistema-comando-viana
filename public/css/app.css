@@ -854,6 +854,22 @@ body {
     background: none;
 }
 
+
+/* ══════════════════
+   SEARCH INLINE BTN
+   ══════════════════ */
+.search-filter .btn-ghost {
+    padding: 4px 6px;
+    margin: 0;
+    border: none;
+    color: var(--text-3);
+    flex-shrink: 0;
+}
+
+.search-filter .btn-ghost:hover {
+    color: var(--navy);
+    background: var(--bg);
+}
 /* ══════════════════
    TABS
    ══════════════════ */

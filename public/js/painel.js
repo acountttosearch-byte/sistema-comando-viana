@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initUserMenu();
     initKeys();
     checkNotifs();
+    initSearchEnter();
 });
 
 // ══════════════════
@@ -960,3 +961,16 @@ function renderPag(cid, data, cb) { const c = document.getElementById(cid); if (
 function initUserMenu() { const trig = document.getElementById('user-trigger'); const menu = document.getElementById('user-menu'); if (!trig || !menu) return; trig.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); }); document.addEventListener('click', e => { if (!trig.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open'); }); }
 
 function initKeys() { document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput')?.focus(); } if (e.key === 'Escape') { closeConfirm(); } }); }
+
+// Quando o utilizador pressiona Enter num campo de busca, aciona a pesquisa
+function initSearchEnter() {
+    document.querySelectorAll('.search-filter input[type="text"]').forEach(input => {
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const btn = input.closest('.search-filter')?.querySelector('.btn-ghost');
+                if (btn) btn.click();
+            }
+        });
+    });
+}

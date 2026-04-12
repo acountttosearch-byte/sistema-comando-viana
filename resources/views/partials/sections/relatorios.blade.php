@@ -19,8 +19,7 @@
     </div>
     <div class="card"><div class="card-head"><h3>Relatórios Anteriores</h3></div>
         <div class="filters" style="padding:12px;">
-            <div class="search-filter full"><i class='bx bx-search'></i><input type="text" id="f-rel-busca" placeholder="Buscar nos relatórios anteriores..."></div>
-            <button class="btn-ghost" onclick="loadRelatoriosAnteriores()"><i class='bx bx-search'></i></button>
+            <div class="search-filter full"><i class='bx bx-search'></i><input type="text" id="f-rel-busca" placeholder="Buscar nos relatórios anteriores..."><button class="btn-ghost btn-sm" onclick="loadRelatoriosAnteriores()" style="border:none;"><i class='bx bx-search'></i></button></div>
         </div>
         <div class="tbl"><div class="tbl-head"><div class="col c2">Tipo</div><div class="col c2">Período</div><div class="col c2">Unidade</div><div class="col c1">Data</div></div><div id="list-rel"><div class="tbl-empty">Sem relatórios.</div></div></div>
     </div>

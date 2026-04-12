@@ -14,8 +14,29 @@ class OcorrenciaFactory extends Factory
     {
         self::$counter++;
         $data = fake()->dateTimeBetween('-12 months', 'now');
-        $locais = ['Rua Principal, Viana Centro', 'Mercado do Zango 3', 'Paragem de táxi, Zango 1', 'Zona residencial, Kikuxi', 'Estrada Nacional, Sequele', 'Bar nocturno, Viana Centro', 'Beco sem saída, Zango 4', 'Campo de futebol, Zango 5', 'Escola Primária do Zango 2', 'Hospital Municipal de Viana'];
-        $bairros = ['Viana Centro', 'Zango 0', 'Zango 1', 'Zango 2', 'Zango 3', 'Zango 4', 'Zango 5', 'Kikuxi', 'Sequele', 'Capalanga', 'Estalagem', 'Mulenvos'];
+
+        // Locais reais dentro dos distritos urbanos de Viana (2025)
+        $locais = [
+            'Rua Principal, Viana Sede',
+            'Mercado do Zango, Zango 3',
+            'Paragem de táxi, Zango 1',
+            'Zona residencial, Kikuxi',
+            'Estrada Nacional EN-230, Vila Flor',
+            'Bar nocturno, Viana Sede',
+            'Beco da Rua 7, Zango 4',
+            'Campo de futebol, Zango 5',
+            'Escola Primária nº 1023, Zango 2',
+            'Hospital Municipal de Viana, Viana Sede',
+            'Praça do Comércio, Estalagem',
+            'Zona industrial, Vila Flor',
+            'Mercado informal, Baía',
+            'Paragem do Zango 0, Zango',
+            'Rotunda da Estalagem, Estalagem',
+        ];
+
+        // Distritos urbanos reais de Viana (divisão 2025)
+        $distritos = ['Viana Sede', 'Zango', 'Estalagem', 'Kikuxi', 'Vila Flor', 'Baía'];
+
         $descricoes = [
             'A vítima foi abordada por dois indivíduos armados que subtraíram o telemóvel e carteira.',
             'Assalto à residência durante a madrugada. Meliantes forçaram a porta.',
@@ -39,7 +60,7 @@ class OcorrenciaFactory extends Factory
             'data_ocorrencia' => $data,
             'hora_ocorrencia' => fake()->time('H:i'),
             'local' => fake()->randomElement($locais),
-            'bairro' => fake()->randomElement($bairros),
+            'bairro' => fake()->randomElement($distritos),
             'prioridade' => fake()->randomElement(['baixa', 'media', 'media', 'media', 'alta', 'alta', 'critica']),
             'estado_id' => fake()->randomElement([1, 2, 3, 4, 4, 5, 5, 5, 6, 7]),
             'unidade_id' => fake()->numberBetween(2, 6),

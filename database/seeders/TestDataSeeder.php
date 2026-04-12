@@ -330,13 +330,13 @@ class TestDataSeeder extends Seeder
         $unidadesIds = DB::table('unidades')->where('estado', 'activo')->pluck('id')->toArray();
         $alertasData = [
             ['tipo' => 1, 'titulo' => 'Procura-se suspeito de homicídio no Zango 3', 'desc' => 'Indivíduo do sexo masculino, 1.80m, magro, cicatriz no rosto. Considerado perigoso.', 'prio' => 'urgente'],
-            ['tipo' => 1, 'titulo' => 'Suspeito de assaltos em série em Viana Centro', 'desc' => 'Homem de estatura média, usa boné preto e mochila azul.', 'prio' => 'alta'],
+            ['tipo' => 1, 'titulo' => 'Suspeito de assaltos em série em Viana Sede', 'desc' => 'Homem de estatura média, usa boné preto e mochila azul.', 'prio' => 'alta'],
             ['tipo' => 2, 'titulo' => 'Toyota Hilux branca roubada', 'desc' => 'Matrícula LD-45-78-AC. Última vez vista na direcção do Zango.', 'prio' => 'alta'],
             ['tipo' => 3, 'titulo' => 'Criança desaparecida no Zango 2', 'desc' => 'Menina de 8 anos, Ana Sebastião. Uniforme escolar azul e branco.', 'prio' => 'urgente'],
-            ['tipo' => 3, 'titulo' => 'Idoso desaparecido em Capalanga', 'desc' => 'Homem de 72 anos, sofre de demência. Camisa branca, calças escuras.', 'prio' => 'alta'],
+            ['tipo' => 3, 'titulo' => 'Idoso desaparecido na Estalagem', 'desc' => 'Homem de 72 anos, sofre de demência. Camisa branca, calças escuras.', 'prio' => 'alta'],
             ['tipo' => 4, 'titulo' => 'Reforço policial no mercado do Zango', 'desc' => 'Actividade criminosa crescente. Reforçar presença nos próximos 7 dias.', 'prio' => 'normal'],
             ['tipo' => 1, 'titulo' => 'Procurado por violação no Kikuxi', 'desc' => 'Mandado de captura emitido pelo tribunal provincial.', 'prio' => 'urgente'],
-            ['tipo' => 2, 'titulo' => 'Motorizada Honda roubada no Sequele', 'desc' => 'Honda XR 150, vermelha e preta. Furtada junto ao mercado.', 'prio' => 'normal'],
+            ['tipo' => 2, 'titulo' => 'Motorizada Honda roubada em Vila Flor', 'desc' => 'Honda XR 150, vermelha e preta. Furtada junto ao mercado.', 'prio' => 'normal'],
         ];
 
         foreach ($alertasData as $ad) {
@@ -398,18 +398,20 @@ class TestDataSeeder extends Seeder
             ['tipo' => 'Vandalismo', 'desc' => 'Partiram o vidro do meu carro durante a noite.'],
             ['tipo' => 'Violência doméstica', 'desc' => 'O meu marido agride-me frequentemente.'],
         ];
-        $nomesCidadao = ['Manuel Santos', 'Ana Domingos', 'Pedro Costa', 'Maria Fernandes', 'João Pereira', 'Teresa Lopes'];
+        // Nomes consistentes: nome feminino para queixas de VD femininas, masculinos para o resto
+        $nomesM = ['Manuel Santos', 'Pedro Costa', 'João Pereira', 'Francisco Domingos', 'Sebastião Lopes', 'Gilberto Fernandes'];
+        $nomesF = ['Ana Domingos', 'Maria Fernandes', 'Teresa Lopes', 'Joana Correia', 'Esperança Silva', 'Helena Bumba'];
         for ($i = 0; $i < 15; $i++) {
             $qxNum++;
             $qx = fake()->randomElement($qxData);
             $estado = fake()->randomElement(['recebida', 'recebida', 'em_analise', 'convertida', 'rejeitada']);
             QueixaCidadao::create([
                 'protocolo' => 'QX-' . date('Y') . '-' . str_pad($qxNum, 5, '0', STR_PAD_LEFT),
-                'nome_cidadao' => fake()->randomElement($nomesCidadao),
+                'nome_cidadao' => ($qx['tipo'] === 'Violência doméstica') ? fake()->randomElement($nomesF) : fake()->randomElement(array_merge($nomesM, $nomesF)),
                 'bi' => fake()->boolean(60) ? fake()->numerify('##########LA###') : null,
                 'telefone' => '9' . fake()->numerify('########'),
                 'tipo_queixa' => $qx['tipo'], 'descricao' => $qx['desc'],
-                'local' => fake()->randomElement(['Zango 3', 'Viana Centro', 'Kikuxi', 'Sequele']),
+                'local' => fake()->randomElement(['Zango 3', 'Viana Sede', 'Kikuxi', 'Vila Flor', 'Estalagem', 'Baía']),
                 'estado' => $estado,
                 'ocorrencia_id' => $estado === 'convertida' ? fake()->randomElement($ocorrenciasIds) : null,
                 'analisado_por' => in_array($estado, ['convertida', 'rejeitada', 'em_analise']) ? fake()->randomElement($agentesIds) : null,
@@ -436,7 +438,7 @@ class TestDataSeeder extends Seeder
         // ══════════════════════════════
         $this->command->info('   → Notificações...');
         $notifs = [
-            ['tipo' => 'alerta', 'titulo' => 'Novo alerta BOLO emitido', 'msg' => 'Alerta de suspeito procurado emitido.'],
+            ['tipo' => 'alerta', 'titulo' => 'Novo alerta emitido', 'msg' => 'Alerta de suspeito procurado emitido.'],
             ['tipo' => 'ocorrencia', 'titulo' => 'Ocorrência de alta prioridade', 'msg' => 'Ocorrência CRÍTICA registada no Zango 3.'],
             ['tipo' => 'sistema', 'titulo' => 'Backup concluído', 'msg' => 'Backup automático concluído com sucesso.'],
         ];

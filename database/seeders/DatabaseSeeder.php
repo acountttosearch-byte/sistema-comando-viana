@@ -21,13 +21,14 @@ class DatabaseSeeder extends Seeder
 
         // ═══════════════════════════════════════
         // UNIDADES POLICIAIS DE VIANA
+        // (Distritos urbanos 2025: Viana Sede, Zango, Estalagem, Kikuxi, Vila Flor, Baía)
         // ═══════════════════════════════════════
         DB::table('unidades')->insert([
-            ['id' => 1, 'nome' => 'Comando Municipal de Viana', 'tipo_unidade_id' => 1, 'unidade_pai_id' => null, 'endereco' => 'Viana Centro', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'nome' => 'Esquadra de Viana Centro', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Viana Centro', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'nome' => 'Comando Municipal de Viana', 'tipo_unidade_id' => 1, 'unidade_pai_id' => null, 'endereco' => 'Viana Sede', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'nome' => 'Esquadra de Viana Sede', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Viana Sede', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 3, 'nome' => 'Esquadra do Zango', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Zango', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 4, 'nome' => 'Esquadra de Kikuxi', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Kikuxi', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 5, 'nome' => 'Esquadra do Sequele', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Sequele', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'nome' => 'Esquadra de Vila Flor', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Vila Flor', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 6, 'nome' => 'Posto Policial Zango 3', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 3, 'endereco' => 'Zango 3', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
@@ -84,7 +85,7 @@ class DatabaseSeeder extends Seeder
             ['nome' => 'patrulhas.ver', 'descricao' => 'Ver patrulhas', 'modulo' => 'patrulhas'],
             ['nome' => 'patrulhas.criar', 'descricao' => 'Planear patrulhas', 'modulo' => 'patrulhas'],
             ['nome' => 'alertas.ver', 'descricao' => 'Ver alertas', 'modulo' => 'alertas'],
-            ['nome' => 'alertas.criar', 'descricao' => 'Criar alertas BOLO', 'modulo' => 'alertas'],
+            ['nome' => 'alertas.criar', 'descricao' => 'Criar alertas', 'modulo' => 'alertas'],
             ['nome' => 'relatorios.ver', 'descricao' => 'Ver relatórios', 'modulo' => 'relatorios'],
             ['nome' => 'relatorios.gerar', 'descricao' => 'Gerar relatórios', 'modulo' => 'relatorios'],
             ['nome' => 'viaturas.ver', 'descricao' => 'Ver viaturas', 'modulo' => 'viaturas'],
@@ -266,10 +267,14 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ═══════════════════════════════════════
-        // BAIRROS DE VIANA
+        // BAIRROS / DISTRITOS URBANOS DE VIANA (Divisão administrativa 2025)
+        // Distritos: Viana Sede, Zango, Estalagem, Kikuxi, Vila Flor, Baía
+        // Comuna: Calumbo
         // ═══════════════════════════════════════
         DB::table('bairros')->insert([
-            ['nome' => 'Viana Centro', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Viana Sede', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Bairro da Paz', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Bairro Popular', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Zango 0', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Zango 1', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Zango 2', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
@@ -277,21 +282,23 @@ class DatabaseSeeder extends Seeder
             ['nome' => 'Zango 4', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Zango 5', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Kikuxi', 'municipio' => 'Viana', 'unidade_responsavel_id' => 4, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Sequele', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Capalanga', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
             ['nome' => 'Estalagem', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Mulenvos', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Vila Flor', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Baía', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Calumbo', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════
-        // ZONAS DE PATRULHA
+        // ZONAS DE PATRULHA (baseadas nos distritos urbanos 2025)
         // ═══════════════════════════════════════
         DB::table('zonas_patrulha')->insert([
-            ['nome' => 'Zona Centro Viana', 'descricao' => 'Área central comercial', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Zango Norte', 'descricao' => 'Zango 0-2', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Zango Sul', 'descricao' => 'Zango 3-5', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Kikuxi', 'descricao' => 'Área de Kikuxi', 'unidade_id' => 4, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Sequele', 'descricao' => 'Área do Sequele', 'unidade_id' => 5, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Viana Sede', 'descricao' => 'Área central e comercial de Viana Sede', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Zango Norte', 'descricao' => 'Zango 0, Zango 1, Zango 2', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Zango Sul', 'descricao' => 'Zango 3, Zango 4, Zango 5', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Kikuxi', 'descricao' => 'Distrito urbano de Kikuxi', 'unidade_id' => 4, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Vila Flor', 'descricao' => 'Distrito urbano de Vila Flor e zona industrial', 'unidade_id' => 5, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Estalagem', 'descricao' => 'Distrito urbano da Estalagem', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Baía', 'descricao' => 'Distrito urbano da Baía', 'unidade_id' => 5, 'nivel_risco' => 'baixo', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════

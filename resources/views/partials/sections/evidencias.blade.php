@@ -3,9 +3,8 @@
         <div><h1 class="page-title">Cofre de Evidências</h1><p class="page-desc">Repositório digital e físico</p></div>
     </div>
     <div class="filters">
-        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-ev-busca" placeholder="Buscar por código ou descrição..."></div>
+        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-ev-busca" placeholder="Buscar por código ou descrição..."><button class="btn-ghost btn-sm" onclick="loadEvidencias()" style="border:none;"><i class='bx bx-search'></i></button></div>
         <select id="f-ev-estado" onchange="loadEvidencias()"><option value="">Estado</option><option value="em_custodia">Em Custódia</option><option value="transferida">Transferida</option></select>
-        <button class="btn-ghost" onclick="loadEvidencias()"><i class='bx bx-search'></i></button>
     </div>
     <div class="tabs-bar">
         <button class="tab active" onclick="filtEv('todos',event)">Todos</button>
