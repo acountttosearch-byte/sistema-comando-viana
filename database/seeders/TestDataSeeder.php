@@ -35,7 +35,7 @@ class TestDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info('🚔 A gerar dados de teste...');
+        $this->command->info('Criando os dados de teste...');
 
         // ══════════════════════════════
         // 1. AGENTES (30)
@@ -487,7 +487,7 @@ class TestDataSeeder extends Seeder
             ['Mensagens', 30],
             ['Queixas', 15],
         ]);
-        $this->command->info('📋 Login Admin: admin@policia-viana.ao / Admin@2025');
-        $this->command->info('📋 Login Agentes: *@policia-viana.ao / ' . config('auth.default_agent_password'));
+        $this->command->info('Login Admin: admin@policia-viana.ao / Admin@2025');
+        $this->command->info('Login Agentes: *@policia-viana.ao / ' . config('auth.default_agent_password'));
     }
 }
