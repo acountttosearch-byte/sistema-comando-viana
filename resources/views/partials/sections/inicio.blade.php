@@ -23,9 +23,13 @@
             <div class="stat-icon purple"><i class='bx bx-lock-alt'></i></div>
             <div><span class="stat-value" id="m-detencoes">—</span><span class="stat-label">Detenções (mês)</span></div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" onclick="showSection('investigacoes')" style="cursor:pointer;">
             <div class="stat-icon teal"><i class='bx bx-search-alt-2'></i></div>
             <div><span class="stat-value" id="m-inv">—</span><span class="stat-label">Investigações</span></div>
+        </div>
+        <div class="stat-card" onclick="showSection('processos')" style="cursor:pointer;">
+            <div class="stat-icon purple"><i class='bx bx-folder-open'></i></div>
+            <div><span class="stat-value" id="m-proc">—</span><span class="stat-label">Processos Activos</span></div>
         </div>
         <div class="stat-card">
             <div class="stat-icon red"><i class='bx bx-bell-ring'></i></div>

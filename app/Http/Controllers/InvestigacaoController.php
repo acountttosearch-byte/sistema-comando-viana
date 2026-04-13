@@ -22,7 +22,20 @@ class InvestigacaoController extends Controller
             $b = $request->busca;
             $q->where(fn($q2) => $q2->where('numero_investigacao', 'like', "%$b%")->orWhere('resumo', 'like', "%$b%"));
         }
-        return response()->json($q->orderByDesc('created_at')->paginate(20));
+        return response()->json($q->orderByDesc('created_at')->paginate($request->per_page ?? 20));
+    }
+
+    public function show(Investigacao $investigacao)
+    {
+        return response()->json($investigacao->load([
+            'ocorrencia.tipoCrime.categoria', 'ocorrencia.estado',
+            'ocorrencia.agenteRegisto', 'ocorrencia.agenteResponsavel',
+            'ocorrencia.unidade', 'ocorrencia.envolvimentos.pessoa',
+            'ocorrencia.envolvimentos.tipoEnvolvimento',
+            'ocorrencia.evidencias.tipoEvidencia',
+            'ocorrencia.detencoes.pessoa', 'ocorrencia.detencoes.estado',
+            'investigador', 'estado', 'notas.agente',
+        ]));
     }
 
     public function store(Request $request)
@@ -58,7 +71,7 @@ class InvestigacaoController extends Controller
 
     public function adicionarNota(Request $request, Investigacao $investigacao)
     {
-        $request->validate(['titulo' => 'required|string|max:200', 'conteudo' => 'required|string']);
+        $request->validate(['titulo' => 'nullable|string|max:200', 'conteudo' => 'required|string']);
         $nota = NotaInvestigacao::create([
             'investigacao_id' => $investigacao->id,
             'agente_id' => auth()->user()->agente->id,

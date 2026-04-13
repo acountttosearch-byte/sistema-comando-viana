@@ -7,6 +7,8 @@ use App\Models\Detencao;
 use App\Models\Agente;
 use App\Models\Unidade;
 use App\Models\Alerta;
+use App\Models\ProcessoCriminal;
+use App\Models\Investigacao;
 use App\Models\Configuracao;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -165,5 +167,53 @@ class ExportPdfController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download('alertas-' . date('Y-m-d') . '.pdf');
+    }
+
+    public function fichaProcesso(ProcessoCriminal $processo)
+    {
+        $processo->load([
+            'ocorrencia.tipoCrime.categoria', 'ocorrencia.estado',
+            'ocorrencia.agenteRegisto', 'ocorrencia.agenteResponsavel',
+            'ocorrencia.unidade', 'ocorrencia.envolvimentos.pessoa',
+            'ocorrencia.envolvimentos.tipoEnvolvimento',
+            'ocorrencia.evidencias.tipoEvidencia',
+            'ocorrencia.detencoes.pessoa', 'ocorrencia.detencoes.estado',
+            'ocorrencia.investigacoes.investigador', 'ocorrencia.investigacoes.estado',
+            'agenteResponsavel', 'unidade',
+        ]);
+
+        $data = [
+            'proc' => $processo,
+            'entidade' => Configuracao::valor('entidade', 'Comando Municipal de Viana'),
+            'gerado_por' => auth()->user()->agente?->nome ?? 'Admin',
+            'data_geracao' => now()->format('d/m/Y H:i'),
+        ];
+
+        $pdf = Pdf::loadView('pdf.ficha-processo', $data);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('processo-' . $processo->numero_processo . '.pdf');
+    }
+
+    public function fichaInvestigacao(Investigacao $investigacao)
+    {
+        $investigacao->load([
+            'ocorrencia.tipoCrime.categoria', 'ocorrencia.estado',
+            'ocorrencia.unidade', 'ocorrencia.envolvimentos.pessoa',
+            'ocorrencia.envolvimentos.tipoEnvolvimento',
+            'investigador', 'estado', 'notas.agente',
+        ]);
+
+        $data = [
+            'inv' => $investigacao,
+            'entidade' => Configuracao::valor('entidade', 'Comando Municipal de Viana'),
+            'gerado_por' => auth()->user()->agente?->nome ?? 'Admin',
+            'data_geracao' => now()->format('d/m/Y H:i'),
+        ];
+
+        $pdf = Pdf::loadView('pdf.ficha-investigacao', $data);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('investigacao-' . $investigacao->numero_investigacao . '.pdf');
     }
 }

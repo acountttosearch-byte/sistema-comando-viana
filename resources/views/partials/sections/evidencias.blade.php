@@ -1,9 +1,11 @@
 <div id="section-evidencias" class="section">
     <div class="page-header">
         <div><h1 class="page-title">Cofre de Evidências</h1><p class="page-desc">Repositório digital e físico</p></div>
+        <button class="btn-primary" onclick="formNovaEvidencia()"><i class='bx bx-plus'></i> Nova Evidência</button>
     </div>
     <div class="filters">
-        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-ev-busca" placeholder="Buscar por código ou descrição..."><button class="btn-ghost btn-sm" onclick="loadEvidencias()" style="border:none;"><i class='bx bx-search'></i></button></div>
+        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-ev-busca" placeholder="Buscar por código ou descrição..."></div>
+        <button class="btn-primary btn-sm" onclick="loadEvidencias()"><i class='bx bx-search'></i> Buscar</button>
         <select id="f-ev-estado" onchange="loadEvidencias()"><option value="">Estado</option><option value="em_custodia">Em Custódia</option><option value="transferida">Transferida</option></select>
     </div>
     <div class="tabs-bar">

@@ -6,6 +6,7 @@ use App\Models\Agente;
 use App\Models\Ocorrencia;
 use App\Models\Detencao;
 use App\Models\Investigacao;
+use App\Models\ProcessoCriminal;
 use App\Models\Unidade;
 use App\Models\Alerta;
 use Illuminate\Http\Request;
@@ -61,6 +62,8 @@ class DashboardController extends Controller
             'total_unidades' => Unidade::activas()->count(),
             'total_esquadras' => Unidade::esquadras()->activas()->count(),
             'alertas_activos' => Alerta::activos()->count(),
+            'processos_activos' => ProcessoCriminal::where('estado', 'em_instrucao')->count(),
+            'processos_total' => ProcessoCriminal::count(),
             'crimes_por_tipo' => $this->crimesPorTipo($global, $uid, $pessoal, $agenteId),
             'crimes_por_mes' => $this->crimesPorMes($global, $uid, $pessoal, $agenteId),
             'ultimas_ocorrencias' => $this->ultimas($global, $uid, $pessoal, $agenteId),

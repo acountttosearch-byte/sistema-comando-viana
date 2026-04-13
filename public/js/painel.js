@@ -140,8 +140,8 @@ function showSection(id) {
     currentView = id;
 
     const loaders = {
-        inicio: loadDashboard, ocorrencias: loadOcorrencias, pessoas: loadPessoas,
-        detencoes: loadDetencoes, evidencias: () => loadEvidencias(1, 'todos'),
+        inicio: loadDashboard, ocorrencias: loadOcorrencias, processos: loadProcessos,
+        pessoas: loadPessoas, detencoes: loadDetencoes, evidencias: () => loadEvidencias(1, 'todos'),
         investigacoes: loadInvestigacoes, despachos: loadDespachos, patrulhas: loadPatrulhas,
         alertas: () => loadAlertas('activo'), viaturas: loadViaturas, armamento: loadArmamento,
         mensagens: () => loadMensagens('inbox'), relatorios: loadRelatorios,
@@ -185,6 +185,8 @@ async function loadAux() {
     fillSel('f-det-estado', aux.estados_detencao, 'id', 'nome', 'Todos');
     fillSel('f-det-unidade', aux.unidades, 'id', 'nome', 'Unidade');
     fillSel('f-inv-estado', aux.estados_investigacao, 'id', 'nome', 'Todos');
+    fillSel('f-inv-unidade', aux.unidades, 'id', 'nome', 'Unidade');
+    fillSel('f-proc-unidade', aux.unidades, 'id', 'nome', 'Unidade');
     fillSel('f-arm-tipo', aux.tipos_armamento, 'id', 'nome', 'Tipo');
     fillSel('f-arm-unidade', aux.unidades, 'id', 'nome', 'Unidade');
     fillSel('f-viat-unidade', aux.unidades, 'id', 'nome', 'Unidade');
@@ -215,6 +217,7 @@ async function loadDashboard() {
     txt('m-total-oc', d.total_ocorrencias); txt('m-abertas', d.ocorrencias_abertas);
     txt('m-resolvidas', d.ocorrencias_resolvidas); txt('m-detencoes', d.detencoes_mes);
     txt('m-inv', d.investigacoes_activas); txt('m-alertas', d.alertas_activos);
+    txt('m-proc', d.processos_activos || 0);
     renderBar('chart-tipo', d.crimes_por_tipo, 'tipo_nome', 'total');
     renderBar('chart-mes', d.crimes_por_mes, i => { const ms = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']; return ms[i.mes] || i.mes; }, 'total');
     renderDashUltimas(d.ultimas_ocorrencias || []);
@@ -409,8 +412,11 @@ async function viewOcorrencia(id) {
     // Evidencias
     h += `<div class="detail-sect"><h4>Evidencias ${o.evidencias?.length ? '(' + o.evidencias.length + ')' : ''}</h4>`;
     if (o.evidencias?.length) {
-        h += '<div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c1">Codigo</div><div class="col c1">Tipo</div><div class="col c2">Descricao</div><div class="col c1">Estado</div></div>';
-        o.evidencias.forEach(ev => h += `<div class="tbl-row"><div class="col c1"><strong>${ev.codigo}</strong></div><div class="col c1">${ev.tipo_evidencia?.nome || '-'}</div><div class="col c2">${ev.descricao}</div><div class="col c1">${bGen(ev.estado)}</div></div>`);
+        h += '<div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c1">Codigo</div><div class="col c1">Tipo</div><div class="col c2">Descricao</div><div class="col c1">Estado</div><div class="col c1">Ficheiro</div></div>';
+        o.evidencias.forEach(ev => {
+            const fileBtn = ev.ficheiro ? `<button class="btn-icon" onclick="event.stopPropagation();previewEvidencia(${ev.id},'${ev.tipo_evidencia?.nome||''}','${(ev.descricao||'').replace(/'/g,"\\'")}')" title="Ver"><i class='bx bx-show'></i></button>` : '-';
+            h += `<div class="tbl-row" onclick="viewEvidencia(${ev.id})" style="cursor:pointer;"><div class="col c1"><strong>${ev.codigo}</strong></div><div class="col c1">${ev.tipo_evidencia?.nome || '-'}</div><div class="col c2">${ev.descricao}</div><div class="col c1">${bGen(ev.estado)}</div><div class="col c1">${fileBtn}</div></div>`;
+        });
         h += '</div>';
     } else { h += '<p class="text-muted">Nenhuma evidencia.</p>'; }
     h += '</div>';
@@ -425,7 +431,7 @@ async function viewOcorrencia(id) {
     // Investigacoes
     if (o.investigacoes?.length) {
         h += '<div class="detail-sect"><h4>Investigacoes</h4><div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c1">Numero</div><div class="col c2">Investigador</div><div class="col c1">Progresso</div><div class="col c1">Estado</div></div>';
-        o.investigacoes.forEach(i => h += `<div class="tbl-row"><div class="col c1">${i.numero_investigacao}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c1">${i.progresso}%</div><div class="col c1">${bEstadoObj(i.estado)}</div></div>`);
+        o.investigacoes.forEach(i => h += `<div class="tbl-row" onclick="viewInvestigacao(${i.id})" style="cursor:pointer;"><div class="col c1">${i.numero_investigacao}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c1">${i.progresso}%</div><div class="col c1">${bEstadoObj(i.estado)}</div></div>`);
         h += '</div></div>';
     }
 
@@ -614,33 +620,41 @@ async function submitNovaDetencao() {
 // (listagem funciona igual, formularios no main)
 // ══════════════════
 let evTipoActual = 'todos';
-async function loadEvidencias(page = 1, tipo) { if (tipo !== undefined) evTipoActual = tipo; const p = new URLSearchParams({ page, busca: v('f-ev-busca'), estado: v('f-ev-estado') }); if (evTipoActual && evTipoActual !== 'todos') p.append('tipo_evidencia_id', evTipoActual); const d = await api('/evidencias?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-ev'); const icos = { 1: 'bx-image', 2: 'bx-video', 3: 'bx-file', 4: 'bx-microphone', 5: 'bx-box' }; if (!items.length) { c.innerHTML = '<div class="tbl-empty" style="grid-column:1/-1;">Sem evidências.</div>'; return; } c.innerHTML = items.map(e => `<div class="ev-card" onclick="viewEvidencia(${e.id})" style="cursor:pointer;"><div class="ev-icon"><i class='bx ${icos[e.tipo_evidencia_id] || 'bx-file'}'></i></div><div class="ev-name">${e.descricao}</div><div class="ev-meta">${e.codigo} - ${e.tipo_evidencia?.nome || ''}</div><div class="ev-meta">${bGen(e.estado)}</div>${e.ficheiro ? '<div class="ev-meta"><i class="bx bx-paperclip"></i> Ficheiro</div>' : ''}</div>`).join(''); renderPag('pag-ev', d, loadEvidencias); }
+async function loadEvidencias(page = 1, tipo) { if (tipo !== undefined) evTipoActual = tipo; const p = new URLSearchParams({ page, busca: v('f-ev-busca'), estado: v('f-ev-estado') }); if (evTipoActual && evTipoActual !== 'todos') p.append('tipo_evidencia_id', evTipoActual); const d = await api('/evidencias?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-ev'); const icos = { 1: 'bx-image', 2: 'bx-video', 3: 'bx-file', 4: 'bx-microphone', 5: 'bx-box' }; if (!items.length) { c.innerHTML = '<div class="tbl-empty" style="grid-column:1/-1;">Sem evidências.</div>'; renderPag('pag-ev', d, loadEvidencias); return; } c.innerHTML = items.map(e => {
+    const ico = icos[e.tipo_evidencia_id] || 'bx-file';
+    const hasFile = !!e.ficheiro;
+    return `<div class="ev-card" onclick="viewEvidencia(${e.id})"><div class="ev-card-thumb"><i class='bx ${ico}'></i></div><div class="ev-card-body"><strong>${e.codigo}</strong><div class="ev-card-desc">${e.descricao}</div><div class="ev-card-meta"><span>${e.tipo_evidencia?.nome || ''}</span><span>${bGen(e.estado)}</span></div>${hasFile ? `<div style="margin-top:6px;"><button class="btn-ghost btn-sm" onclick="event.stopPropagation();previewEvidencia(${e.id},'${e.tipo_evidencia?.nome||''}','${(e.descricao||'').replace(/'/g,"\\'")}')"><i class='bx bx-show'></i> Ver ficheiro</button></div>` : ''}</div></div>`;
+}).join(''); renderPag('pag-ev', d, loadEvidencias); }
 function filtEv(tipo, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } loadEvidencias(1, tipo); }
 async function viewEvidencia(id) {
     showLoad(); const e = await api('/evidencias/' + id); hideLoad(); if (!e) return;
     let h = `<div class="page-header"><div><h1 class="page-title">Evidência ${e.codigo}</h1><p class="page-desc">${e.tipo_evidencia?.nome || ''}</p></div>
-        <button class="btn-ghost" onclick="voltarPara('evidencias')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
-        <div class="detail-view">
-        <div class="detail-sect"><h4>Dados da Evidência</h4>
+        <div style="display:flex;gap:8px;">
+            ${e.ficheiro ? `<button class="btn-primary btn-sm" onclick="previewEvidencia(${e.id},'${e.tipo_evidencia?.nome||''}','${(e.descricao||'').replace(/'/g,"\\'")}')"><i class='bx bx-show'></i> Visualizar</button>` : ''}
+            ${e.ficheiro ? `<a href="/api/evidencias/${e.id}/ficheiro" download class="btn-ghost btn-sm"><i class='bx bx-download'></i> Descarregar</a>` : ''}
+            <button class="btn-ghost" onclick="voltarPara('evidencias')"><i class='bx bx-arrow-back'></i> Voltar</button>
+        </div></div>
+        <div class="grid-2">
+        <div class="card"><div class="card-head"><h3>Dados da Evidência</h3></div><div class="card-body">
             ${dl('Código', e.codigo)}${dl('Tipo', e.tipo_evidencia?.nome)}${dl('Descrição', e.descricao)}
             ${dl('Estado', bGen(e.estado))}${dl('Localização Física', e.localizacao_fisica)}
             ${dl('Registado por', e.agente_registo?.nome)}
-            ${e.ficheiro ? `<div style="margin-top:12px;"><a href="/api/evidencias/${e.id}/ficheiro" target="_blank" class="btn-primary btn-sm"><i class='bx bx-download'></i> Ver/Descarregar Ficheiro</a></div>` : ''}
-        </div>
-        <div class="detail-sect"><h4>Ocorrência Associada</h4>
+            ${e.hash_ficheiro ? dl('Hash SHA-256', '<code style="font-size:10px;">' + e.hash_ficheiro.substring(0,16) + '...</code>') : ''}
+            ${e.tamanho_ficheiro ? dl('Tamanho', (e.tamanho_ficheiro / 1024 / 1024).toFixed(2) + ' MB') : ''}
+        </div></div>
+        <div class="card"><div class="card-head"><h3>Ocorrência Associada</h3></div><div class="card-body">
             ${dl('Número', e.ocorrencia?.numero_ocorrencia)}${dl('Tipo', e.ocorrencia?.tipo_crime?.nome)}${dl('Unidade', e.ocorrencia?.unidade?.nome)}
             <button class="link-btn" onclick="viewOcorrencia(${e.ocorrencia?.id})">Ver Ocorrência</button>
-        </div>`;
+        </div></div></div>`;
     if (e.cadeia_custodia?.length) {
-        h += '<div class="detail-sect"><h4>Cadeia de Custódia</h4><div class="tbl" style="margin-top:0;"><div class="tbl-head"><div class="col c2">De</div><div class="col c2">Para</div><div class="col c2">Local</div><div class="col c1">Data</div></div>';
+        h += '<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Cadeia de Custódia</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">De</div><div class="col c2">Para</div><div class="col c2">Local</div><div class="col c1">Data</div></div>';
         e.cadeia_custodia.forEach(cc => h += `<div class="tbl-row"><div class="col c2">${cc.agente_origem?.nome || '-'}</div><div class="col c2">${cc.agente_destino?.nome || '-'}</div><div class="col c2">${cc.local_destino || '-'}</div><div class="col c1">${fDT(cc.data_transferencia)}</div></div>`);
         h += '</div></div>';
     }
-    h += '</div>';
     renderMain('evidencias', h);
 }
 
-async function loadInvestigacoes() { const p = new URLSearchParams({ estado_id: v('f-inv-estado'), busca: v('f-inv-busca'), data_inicio: v('f-inv-di'), data_fim: v('f-inv-df') }); const d = await api('/investigacoes?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-inv'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(i => `<div class="tbl-row"><div class="col c2"><strong>${i.numero_investigacao}</strong></div><div class="col c1">${i.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c2"><span style="font-size:11px;">${i.progresso}%</span><div class="progress-track"><div class="progress-fill" style="width:${i.progresso}%"></div></div></div><div class="col c1">${bEstadoObj(i.estado)}</div><div class="col c1"><button class="btn-icon"><i class='bx bx-show'></i></button></div></div>`).join(''); }
+async function loadInvestigacoes(page = 1) { const p = new URLSearchParams({ page, estado_id: v('f-inv-estado'), busca: v('f-inv-busca'), data_inicio: v('f-inv-di'), data_fim: v('f-inv-df') }); const un = v('f-inv-unidade'); if (un) p.append('unidade_id', un); const d = await api('/investigacoes?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-inv'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; renderPag('pag-inv', d, loadInvestigacoes); return; } c.innerHTML = items.map(i => `<div class="tbl-row" onclick="viewInvestigacao(${i.id})" style="cursor:pointer;"><div class="col c2"><strong>${i.numero_investigacao}</strong></div><div class="col c1">${i.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${i.investigador?.nome || '-'}</div><div class="col c2"><span style="font-size:11px;">${i.progresso}%</span><div class="progress-track"><div class="progress-fill" style="width:${i.progresso}%"></div></div></div><div class="col c1">${bEstadoObj(i.estado)}</div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();exportPdfInvestigacao(${i.id})" title="PDF"><i class='bx bx-download'></i></button></div></div>`).join(''); renderPag('pag-inv', d, loadInvestigacoes); }
 
 async function loadDespachos() { const d = await api('/despachos?estado=' + v('f-desp-estado')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-desp'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(dp => `<div class="tbl-row"><div class="col c2">${dp.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c1">${bPrio(dp.prioridade)}</div><div class="col c2">${dp.agente_destino?.nome || '-'}</div><div class="col c1">${dp.unidade?.nome || '-'}</div><div class="col c1">${bGen(dp.estado)}</div><div class="col c1">${fDT(dp.data_despacho)}</div><div class="col c1">${dp.estado === 'pendente' ? `<button class="btn-primary btn-sm" onclick="respDesp(${dp.id})">Aceitar</button>` : ''}</div></div>`).join(''); }
 async function respDesp(id) { const d = await api(`/despachos/${id}/responder`, { method: 'PATCH', body: JSON.stringify({ estado: 'aceite' }) }); if (d?.success) { toast('Despacho aceite.', 'ok'); loadDespachos(); } }
@@ -928,6 +942,262 @@ function exportPdfOcorrencia(id) { window.open('/api/pdf/ocorrencia/' + id, '_bl
 function exportPdfAgentes() { window.open('/api/pdf/agentes?estado=activo', '_blank'); }
 
 // ══════════════════
+// PROCESSOS CRIMINAIS
+// ══════════════════
+async function loadProcessos(page = 1) {
+    const p = new URLSearchParams({ page, busca: v('f-proc-busca'), estado: v('f-proc-estado'), data_inicio: v('f-proc-di'), data_fim: v('f-proc-df') });
+    const un = v('f-proc-unidade'); if (un) p.append('unidade_id', un);
+    const d = await api('/processos-criminais?' + p);
+    if (!d) return;
+    const items = d.data || [];
+    const c = document.getElementById('list-proc');
+    if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem processos criminais.</div>'; renderPag('pag-proc', d, loadProcessos); return; }
+    c.innerHTML = items.map(p => {
+        const est = { em_instrucao: ['Em Instrução','blue'], concluido: ['Concluído','green'], remetido_mp: ['Remetido MP','orange'], arquivado: ['Arquivado','gray'] };
+        const [en, ec] = est[p.estado] || [p.estado, 'gray'];
+        return `<div class="tbl-row" onclick="viewProcesso(${p.id})"><div class="col c2"><strong>${p.numero_processo}</strong></div><div class="col c2">${p.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${p.ocorrencia?.tipo_crime?.nome || '-'}</div><div class="col c1">${fDate(p.data_abertura)}</div><div class="col c1"><span class="badge badge-${ec}">${en}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();exportPdfProcesso(${p.id})" title="PDF"><i class='bx bx-download'></i></button></div></div>`;
+    }).join('');
+    renderPag('pag-proc', d, loadProcessos);
+}
+
+function formNovoProcesso() {
+    renderMain('processos', `<div class="page-header"><div><h1 class="page-title">Abrir Processo Criminal</h1><p class="page-desc">Criar novo processo a partir de uma ocorrência</p></div><button class="btn-ghost" onclick="voltarPara('processos')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+    <div class="form-card"><div class="form-section">Dados do Processo</div>
+        <div class="form-row"><div class="form-col"><label>Ocorrência *</label><select id="nproc-oc" required></select></div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Resumo</label><textarea id="nproc-res" rows="4" placeholder="Resumo inicial do processo..."></textarea></div>
+        <div class="form-row"><div class="form-col"><label><input type="checkbox" id="nproc-conf"> Processo Confidencial</label></div></div>
+        <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('processos')">Cancelar</button><button class="btn-primary" onclick="submitProcesso()"><i class='bx bx-folder-plus'></i> Abrir Processo</button></div>
+    </div>`);
+    loadSelOcorrencias('nproc-oc');
+}
+
+async function submitProcesso() {
+    limparErros();
+    let e = [validarObrigatorio('nproc-oc', 'Ocorrência')].filter(x => x);
+    if (e.length) { toast('Corrija os erros.', 'err'); return; }
+    showLoad();
+    const d = await api('/processos-criminais', { method: 'POST', body: JSON.stringify({ ocorrencia_id: v('nproc-oc'), resumo: v('nproc-res'), confidencial: document.getElementById('nproc-conf')?.checked || false }) });
+    hideLoad();
+    if (d?.success) { toast('Processo criminal aberto.', 'ok'); voltarPara('processos'); }
+}
+
+async function viewProcesso(id) {
+    showLoad();
+    const p = await api('/processos-criminais/' + id);
+    hideLoad();
+    if (!p) return;
+    const est = { em_instrucao: ['Em Instrução','blue'], concluido: ['Concluído','green'], remetido_mp: ['Remetido MP','orange'], arquivado: ['Arquivado','gray'] };
+    const [en, ec] = est[p.estado] || [p.estado,'gray'];
+    const oc = p.ocorrencia || {};
+    let h = `<div class="page-header"><div><h1 class="page-title">${p.numero_processo}</h1><p class="page-desc">Processo Criminal — <span class="badge badge-${ec}">${en}</span></p></div><div style="display:flex;gap:8px;"><button class="btn-ghost" onclick="exportPdfProcesso(${p.id})"><i class='bx bx-download'></i> PDF</button><button class="btn-ghost" onclick="voltarPara('processos')"><i class='bx bx-arrow-back'></i> Voltar</button></div></div>`;
+    h += `<div class="grid-2">`;
+    h += `<div class="card"><div class="card-head"><h3>Dados do Processo</h3></div><div class="card-body">${dl('Número',p.numero_processo)}${dl('Estado',`<span class="badge badge-${ec}">${en}</span>`)}${dl('Data Abertura', fDate(p.data_abertura))}${dl('Data Conclusão', fDate(p.data_conclusao))}${dl('Data Remessa', fDate(p.data_remessa))}${dl('Destino Remessa', p.destino_remessa)}${dl('Confidencial', p.confidencial ? 'Sim' : 'Não')}${dl('Responsável', p.agente_responsavel?.nome)}${dl('Unidade', p.unidade?.nome)}</div></div>`;
+    h += `<div class="card"><div class="card-head"><h3>Ocorrência Associada</h3></div><div class="card-body">${dl('Número', oc.numero_ocorrencia)}${dl('Tipo Crime', oc.tipo_crime?.nome)}${dl('Data', fDate(oc.data_ocorrencia) + ' ' + (oc.hora_ocorrencia||''))}${dl('Local', oc.local)}${dl('Bairro', oc.bairro)}${dl('Prioridade', bPrio(oc.prioridade))}${dl('Estado', bEstado(oc.estado))}</div></div>`;
+    h += `</div>`;
+    if (p.resumo) h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Resumo</h3></div><div class="card-body"><p style="line-height:1.7;">${p.resumo}</p></div></div>`;
+
+    // Envolvidos
+    const envs = oc.envolvimentos || [];
+    if (envs.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Pessoas Envolvidas (${envs.length})</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Nome</div><div class="col c1">BI</div><div class="col c1">Tipo</div></div>`;
+        envs.forEach(e => h += `<div class="tbl-row"><div class="col c2"><strong>${e.pessoa?.nome||'-'}</strong></div><div class="col c1">${e.pessoa?.bi||'-'}</div><div class="col c1">${bGen(e.tipo_envolvimento?.nome)}</div></div>`);
+        h += `</div></div>`;
+    }
+    // Detenções
+    const dets = oc.detencoes || [];
+    if (dets.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Detenções (${dets.length})</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Nº Detenção</div><div class="col c2">Detido</div><div class="col c1">Data</div><div class="col c1">Estado</div></div>`;
+        dets.forEach(d => h += `<div class="tbl-row"><div class="col c2">${d.numero_detencao||'-'}</div><div class="col c2"><strong>${d.pessoa?.nome||'-'}</strong></div><div class="col c1">${fDate(d.data_detencao)}</div><div class="col c1">${bEstado(d.estado)}</div></div>`);
+        h += `</div></div>`;
+    }
+    // Evidências
+    const evs = oc.evidencias || [];
+    if (evs.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Evidências (${evs.length})</h3></div><div class="tbl"><div class="tbl-head"><div class="col c1">Código</div><div class="col c1">Tipo</div><div class="col c2">Descrição</div><div class="col c1">Estado</div></div>`;
+        evs.forEach(e => h += `<div class="tbl-row"><div class="col c1"><strong>${e.codigo}</strong></div><div class="col c1">${e.tipo_evidencia?.nome||'-'}</div><div class="col c2">${e.descricao||'-'}</div><div class="col c1">${e.estado||'-'}</div></div>`);
+        h += `</div></div>`;
+    }
+    // Investigações
+    const invs = oc.investigacoes || [];
+    if (invs.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Investigações (${invs.length})</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Número</div><div class="col c2">Investigador</div><div class="col c1">Progresso</div><div class="col c1">Estado</div></div>`;
+        invs.forEach(i => h += `<div class="tbl-row" onclick="viewInvestigacao(${i.id})"><div class="col c2">${i.numero_investigacao||'-'}</div><div class="col c2">${i.investigador?.nome||'-'}</div><div class="col c1">${i.progresso||0}%</div><div class="col c1">${bEstado(i.estado)}</div></div>`);
+        h += `</div></div>`;
+    }
+    // Acções — actualizar estado
+    if (p.estado !== 'arquivado') {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Acções</h3></div><div class="card-body"><div class="form-row">`;
+        h += `<div class="form-col"><label>Alterar Estado</label><select id="upd-proc-est"><option value="">Selecionar</option>`;
+        if (p.estado === 'em_instrucao') h += `<option value="concluido">Concluído</option><option value="arquivado">Arquivado</option>`;
+        if (p.estado === 'concluido') h += `<option value="remetido_mp">Remeter ao MP</option><option value="arquivado">Arquivado</option>`;
+        if (p.estado === 'remetido_mp') h += `<option value="arquivado">Arquivado</option>`;
+        h += `</select></div>`;
+        if (p.estado === 'concluido' || p.estado === 'em_instrucao') h += `<div class="form-col"><label>Destino Remessa</label><input type="text" id="upd-proc-dest" value="${p.destino_remessa||''}" placeholder="Ex: Procuradoria Municipal de Viana"></div>`;
+        h += `</div>`;
+        h += `<div class="form-col" style="margin:14px 0;"><label>Parecer Final</label><textarea id="upd-proc-parecer" rows="3">${p.parecer_final||''}</textarea></div>`;
+        h += `<button class="btn-primary" onclick="updateProcesso(${p.id})"><i class='bx bx-save'></i> Actualizar</button>`;
+        h += `</div></div>`;
+    }
+    if (p.parecer_final && p.estado === 'arquivado') {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Parecer Final</h3></div><div class="card-body"><p style="line-height:1.7;">${p.parecer_final}</p></div></div>`;
+    }
+    renderMain('processos', h);
+}
+
+async function updateProcesso(id) {
+    const estado = v('upd-proc-est');
+    if (!estado) { toast('Selecione um estado.', 'err'); return; }
+    showLoad();
+    const d = await api('/processos-criminais/' + id, { method: 'PUT', body: JSON.stringify({ estado, parecer_final: v('upd-proc-parecer'), destino_remessa: v('upd-proc-dest') || null }) });
+    hideLoad();
+    if (d?.success) { toast(d.message, 'ok'); viewProcesso(id); }
+}
+
+function exportPdfProcesso(id) { window.open('/api/pdf/processo/' + id, '_blank'); }
+
+// ══════════════════
+// INVESTIGAÇÕES (melhoradas)
+// ══════════════════
+async function viewInvestigacao(id) {
+    showLoad();
+    const inv = await api('/investigacoes/' + id);
+    hideLoad();
+    if (!inv) return;
+    const oc = inv.ocorrencia || {};
+    let h = `<div class="page-header"><div><h1 class="page-title">${inv.numero_investigacao}</h1><p class="page-desc">Investigação — ${bEstado(inv.estado)}</p></div><div style="display:flex;gap:8px;"><button class="btn-ghost" onclick="exportPdfInvestigacao(${inv.id})"><i class='bx bx-download'></i> PDF</button><button class="btn-ghost" onclick="voltarPara('investigacoes')"><i class='bx bx-arrow-back'></i> Voltar</button></div></div>`;
+    h += `<div class="grid-2">`;
+    h += `<div class="card"><div class="card-head"><h3>Dados da Investigação</h3></div><div class="card-body">${dl('Número', inv.numero_investigacao)}${dl('Investigador', inv.investigador?.nome)}${dl('Estado', bEstado(inv.estado))}${dl('Progresso', inv.progresso + '%')}${dl('Data Início', fDate(inv.data_inicio))}${dl('Prazo', fDate(inv.prazo))}${dl('Data Conclusão', fDate(inv.data_fim))}</div></div>`;
+    h += `<div class="card"><div class="card-head"><h3>Ocorrência Associada</h3></div><div class="card-body">${dl('Número', oc.numero_ocorrencia)}${dl('Tipo Crime', oc.tipo_crime?.nome)}${dl('Data', fDate(oc.data_ocorrencia))}${dl('Local', oc.local)}${dl('Estado', bEstado(oc.estado))}</div></div>`;
+    h += `</div>`;
+    if (inv.resumo) h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Resumo</h3></div><div class="card-body"><p style="line-height:1.7;">${inv.resumo}</p></div></div>`;
+
+    // Notas
+    const notas = inv.notas || [];
+    h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Notas de Investigação (${notas.length})</h3><button class="btn-primary btn-sm" onclick="formAddNotaInvestigacao(${inv.id})"><i class='bx bx-plus'></i> Nota</button></div><div class="card-body">`;
+    if (notas.length) {
+        notas.forEach(n => {
+            h += `<div style="border:1px solid var(--border-light);padding:12px;margin-bottom:8px;border-radius:var(--r-sm);"><div style="display:flex;justify-content:space-between;"><strong style="font-size:13px;">${n.titulo||'Sem título'}</strong><span style="font-size:11px;color:var(--text-4);">${fDT(n.created_at)}</span></div><div style="font-size:12px;color:var(--text-3);margin:4px 0;">${n.agente?.nome||'Sistema'}</div><p style="font-size:13px;line-height:1.6;margin-top:6px;">${n.conteudo}</p></div>`;
+        });
+    } else {
+        h += `<div class="tbl-empty">Sem notas de investigação.</div>`;
+    }
+    h += `</div></div>`;
+
+    // Envolvidos da ocorrência
+    const envs = oc.envolvimentos || [];
+    if (envs.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Pessoas Envolvidas</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Nome</div><div class="col c1">BI</div><div class="col c1">Tipo</div></div>`;
+        envs.forEach(e => h += `<div class="tbl-row"><div class="col c2"><strong>${e.pessoa?.nome||'-'}</strong></div><div class="col c1">${e.pessoa?.bi||'-'}</div><div class="col c1">${bGen(e.tipo_envolvimento?.nome)}</div></div>`);
+        h += `</div></div>`;
+    }
+    // Evidências
+    const evs = oc.evidencias || [];
+    if (evs.length) {
+        h += `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Evidências (${evs.length})</h3></div><div class="tbl"><div class="tbl-head"><div class="col c1">Código</div><div class="col c1">Tipo</div><div class="col c2">Descrição</div><div class="col c1">Estado</div><div class="col c1">Ficheiro</div></div>`;
+        evs.forEach(e => {
+            const fileBtn = e.ficheiro ? `<button class="btn-icon" onclick="event.stopPropagation();previewEvidencia(${e.id},'${e.tipo_evidencia?.nome||''}','${e.descricao||''}')" title="Ver ficheiro"><i class='bx bx-show'></i></button>` : '-';
+            h += `<div class="tbl-row"><div class="col c1"><strong>${e.codigo}</strong></div><div class="col c1">${e.tipo_evidencia?.nome||'-'}</div><div class="col c2">${e.descricao||'-'}</div><div class="col c1">${e.estado||'-'}</div><div class="col c1">${fileBtn}</div></div>`;
+        });
+        h += `</div></div>`;
+    }
+    renderMain('investigacoes', h);
+}
+
+function formAddNotaInvestigacao(invId) {
+    const card = document.querySelector('#section-investigacoes .card:last-child');
+    if (document.getElementById('nota-form-inline')) return;
+    const formH = `<div id="nota-form-inline" style="border:1px solid var(--border);padding:16px;border-radius:var(--r);margin-top:12px;background:var(--bg);"><div class="form-col" style="margin-bottom:10px;"><label>Título</label><input type="text" id="nota-tit" placeholder="Título da nota"></div><div class="form-col" style="margin-bottom:10px;"><label>Conteúdo *</label><textarea id="nota-cont" rows="3" placeholder="Descreva as diligências realizadas..."></textarea></div><div style="display:flex;gap:8px;"><button class="btn-primary btn-sm" onclick="submitNotaInvestigacao(${invId})"><i class='bx bx-save'></i> Guardar</button><button class="btn-ghost btn-sm" onclick="document.getElementById('nota-form-inline').remove()">Cancelar</button></div></div>`;
+    if (card) card.insertAdjacentHTML('beforeend', formH);
+}
+
+async function submitNotaInvestigacao(invId) {
+    const cont = v('nota-cont');
+    if (!cont) { toast('O conteúdo é obrigatório.', 'err'); return; }
+    showLoad();
+    const d = await api('/investigacoes/' + invId + '/notas', { method: 'POST', body: JSON.stringify({ titulo: v('nota-tit'), conteudo: cont }) });
+    hideLoad();
+    if (d?.success) { toast('Nota adicionada.', 'ok'); viewInvestigacao(invId); }
+}
+
+function exportPdfInvestigacao(id) { window.open('/api/pdf/investigacao/' + id, '_blank'); }
+
+// ══════════════════
+// EVIDÊNCIAS (melhoradas — viewer + upload)
+// ══════════════════
+function previewEvidencia(evId, tipo, desc) {
+    const url = '/api/evidencias/' + evId + '/ficheiro';
+    const ext = (tipo || '').toLowerCase();
+    let content = '';
+    const isImg = ['fotos','foto','imagem','fotografia'].some(t => ext.includes(t));
+    const isVid = ['video','vídeo','filmagem'].some(t => ext.includes(t));
+    const isAud = ['audio','áudio','gravação','gravacao'].some(t => ext.includes(t));
+    const isDoc = ['documento','pdf','doc'].some(t => ext.includes(t));
+    if (isImg) {
+        content = `<img src="${url}" style="max-width:100%;max-height:70vh;border-radius:var(--r);" alt="${desc}">`;
+    } else if (isVid) {
+        content = `<video controls style="max-width:100%;max-height:70vh;border-radius:var(--r);"><source src="${url}">Navegador não suporta vídeo.</video>`;
+    } else if (isAud) {
+        content = `<div style="padding:40px;text-align:center;"><i class='bx bx-music' style="font-size:48px;color:var(--navy);margin-bottom:16px;display:block;"></i><audio controls style="width:100%;"><source src="${url}">Navegador não suporta áudio.</audio></div>`;
+    } else if (isDoc) {
+        content = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:var(--r);"></iframe>`;
+    } else {
+        content = `<div style="padding:40px;text-align:center;"><i class='bx bx-file' style="font-size:48px;color:var(--text-3);margin-bottom:16px;display:block;"></i><p>Tipo de ficheiro não suportado para pré-visualização.</p><a href="${url}" download class="btn-primary" style="margin-top:12px;display:inline-flex;text-decoration:none;"><i class='bx bx-download'></i> Descarregar</a></div>`;
+    }
+    // Modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'ev-preview-overlay';
+    overlay.innerHTML = `<div class="ev-preview-modal"><div class="ev-preview-header"><h3>${desc || 'Evidência'}</h3><div style="display:flex;gap:8px;"><a href="${url}" download class="btn-ghost btn-sm"><i class='bx bx-download'></i> Descarregar</a><button class="btn-ghost btn-sm" onclick="this.closest('.ev-preview-overlay').remove()"><i class='bx bx-x'></i></button></div></div><div class="ev-preview-body">${content}</div></div>`;
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+}
+
+function formNovaEvidencia() {
+    renderMain('evidencias', `<div class="page-header"><div><h1 class="page-title">Registar Nova Evidência</h1></div><button class="btn-ghost" onclick="voltarPara('evidencias')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
+    <div class="form-card"><div class="form-section">Dados da Evidência</div>
+        <div class="form-row"><div class="form-col"><label>Ocorrência *</label><select id="nev-oc" required></select></div><div class="form-col"><label>Tipo *</label>${mkSel('nev-tipo', aux.tipos_evidencia, 'id', 'nome')}</div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Descrição *</label><textarea id="nev-desc" rows="3" required placeholder="Descreva a evidência..."></textarea></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Ficheiro (imagem, vídeo, PDF, áudio)</label><input type="file" id="nev-file" accept="image/*,video/*,audio/*,.pdf"></div>
+        <div id="nev-preview" style="margin-bottom:14px;"></div>
+        <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('evidencias')">Cancelar</button><button class="btn-primary" onclick="submitEvidencia()"><i class='bx bx-save'></i> Registar</button></div>
+    </div>`);
+    loadSelOcorrencias('nev-oc');
+    document.getElementById('nev-file')?.addEventListener('change', function() {
+        const file = this.files[0];
+        const prev = document.getElementById('nev-preview');
+        if (!file || !prev) { if(prev) prev.innerHTML=''; return; }
+        const url = URL.createObjectURL(file);
+        if (file.type.startsWith('image/')) prev.innerHTML = `<img src="${url}" style="max-height:200px;border-radius:var(--r);border:1px solid var(--border);">`;
+        else if (file.type.startsWith('video/')) prev.innerHTML = `<video src="${url}" controls style="max-height:200px;border-radius:var(--r);"></video>`;
+        else if (file.type.startsWith('audio/')) prev.innerHTML = `<audio src="${url}" controls style="width:100%;"></audio>`;
+        else prev.innerHTML = `<div style="padding:12px;background:var(--bg);border-radius:var(--r);"><i class='bx bx-file'></i> ${file.name}</div>`;
+    });
+}
+
+async function submitEvidencia() {
+    limparErros();
+    let e = [validarObrigatorio('nev-oc', 'Ocorrência'), validarObrigatorio('nev-tipo', 'Tipo'), validarObrigatorio('nev-desc', 'Descrição')].filter(x => x);
+    if (e.length) { toast('Corrija os erros.', 'err'); return; }
+    showLoad();
+    const fd = new FormData();
+    fd.append('ocorrencia_id', v('nev-oc'));
+    fd.append('tipo_evidencia_id', v('nev-tipo'));
+    fd.append('descricao', v('nev-desc'));
+    const file = document.getElementById('nev-file')?.files[0];
+    if (file) fd.append('ficheiro', file);
+    try {
+        const resp = await fetch('/api/evidencias', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content, 'Accept': 'application/json' },
+            body: fd
+        });
+        const d = await resp.json();
+        hideLoad();
+        if (d?.success) { toast('Evidência registada.', 'ok'); voltarPara('evidencias'); }
+        else { toast(d?.message || 'Erro ao registar.', 'err'); }
+    } catch (err) { hideLoad(); toast('Erro de rede.', 'err'); }
+}
+
+// ══════════════════
 // UTILITARIOS
 // ══════════════════
 function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
@@ -960,17 +1230,19 @@ function renderPag(cid, data, cb) { const c = document.getElementById(cid); if (
 
 function initUserMenu() { const trig = document.getElementById('user-trigger'); const menu = document.getElementById('user-menu'); if (!trig || !menu) return; trig.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); }); document.addEventListener('click', e => { if (!trig.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open'); }); }
 
-function initKeys() { document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput')?.focus(); } if (e.key === 'Escape') { closeConfirm(); } }); }
+function initKeys() { document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput')?.focus(); } if (e.key === 'Escape') { closeConfirm(); document.querySelector('.ev-preview-overlay')?.remove(); } }); }
 
 // Quando o utilizador pressiona Enter num campo de busca, aciona a pesquisa
 function initSearchEnter() {
-    document.querySelectorAll('.search-filter input[type="text"]').forEach(input => {
-        input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const btn = input.closest('.search-filter')?.querySelector('.btn-ghost');
-                if (btn) btn.click();
-            }
+    document.querySelectorAll('.filters').forEach(filtersDiv => {
+        filtersDiv.querySelectorAll('.search-filter input[type="text"]').forEach(input => {
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const btn = filtersDiv.querySelector('.btn-primary.btn-sm');
+                    if (btn) btn.click();
+                }
+            });
         });
     });
 }

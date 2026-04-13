@@ -4,7 +4,8 @@
         <button class="btn-primary" onclick="formNovaOcorrencia()"><i class='bx bx-plus'></i> Nova Ocorrência</button>
     </div>
     <div class="filters">
-        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-oc-busca" placeholder="Buscar..."><button class="btn-ghost btn-sm" onclick="loadOcorrencias()" style="border:none;"><i class='bx bx-search'></i></button></div>
+        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-oc-busca" placeholder="Buscar..."></div>
+        <button class="btn-primary btn-sm" onclick="loadOcorrencias()"><i class='bx bx-search'></i> Buscar</button>
         <select id="f-oc-estado" onchange="loadOcorrencias()"><option value="">Estado</option></select>
         <select id="f-oc-prioridade" onchange="loadOcorrencias()"><option value="">Prioridade</option><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="critica">Crítica</option></select>
         <select id="f-oc-tipo" onchange="loadOcorrencias()"><option value="">Tipo</option></select>

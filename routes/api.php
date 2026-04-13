@@ -23,6 +23,7 @@ use App\Http\Controllers\QueixaCidadaoController;
 use App\Http\Controllers\ConfiguracaoController;
 use App\Http\Controllers\TurnoController;
 use App\Http\Controllers\DadosAuxiliaresController;
+use App\Http\Controllers\ProcessoCriminalController;
 
 Route::middleware('auth:web')->group(function () {
 
@@ -77,6 +78,7 @@ Route::middleware('auth:web')->group(function () {
     // Investigações
     Route::get('/investigacoes', [InvestigacaoController::class, 'index']);
     Route::post('/investigacoes', [InvestigacaoController::class, 'store']);
+    Route::get('/investigacoes/{investigacao}', [InvestigacaoController::class, 'show']);
     Route::put('/investigacoes/{investigacao}', [InvestigacaoController::class, 'update']);
     Route::post('/investigacoes/{investigacao}/notas', [InvestigacaoController::class, 'adicionarNota']);
     Route::get('/investigacoes/{investigacao}/notas', [InvestigacaoController::class, 'notas']);
@@ -151,12 +153,20 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/configuracoes', [ConfiguracaoController::class, 'index'])->middleware('permissao:configuracoes.gerir');
     Route::put('/configuracoes', [ConfiguracaoController::class, 'update'])->middleware('permissao:configuracoes.gerir');
 
+    // Processos Criminais
+    Route::get('/processos-criminais', [ProcessoCriminalController::class, 'index']);
+    Route::post('/processos-criminais', [ProcessoCriminalController::class, 'store']);
+    Route::get('/processos-criminais/{processo}', [ProcessoCriminalController::class, 'show']);
+    Route::put('/processos-criminais/{processo}', [ProcessoCriminalController::class, 'update']);
+
     // PDF Export
     Route::get('/pdf/relatorio-criminalidade', [\App\Http\Controllers\ExportPdfController::class, 'relatorioCriminalidade']);
     Route::get('/pdf/ocorrencia/{ocorrencia}', [\App\Http\Controllers\ExportPdfController::class, 'fichaOcorrencia']);
     Route::get('/pdf/detencao/{detencao}', [\App\Http\Controllers\ExportPdfController::class, 'fichaDetencao']);
     Route::get('/pdf/agentes', [\App\Http\Controllers\ExportPdfController::class, 'listaAgentes']);
     Route::get('/pdf/alertas', [\App\Http\Controllers\ExportPdfController::class, 'relatorioAlertas']);
+    Route::get('/pdf/processo/{processo}', [\App\Http\Controllers\ExportPdfController::class, 'fichaProcesso']);
+    Route::get('/pdf/investigacao/{investigacao}', [\App\Http\Controllers\ExportPdfController::class, 'fichaInvestigacao']);
 
     });
 

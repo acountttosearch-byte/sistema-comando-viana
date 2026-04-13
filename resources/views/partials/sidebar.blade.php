@@ -8,6 +8,7 @@
         <div class="nav-group">
             <div class="nav-label">OPERACIONAL</div>
             <a class="nav-item" data-section="ocorrencias" onclick="showSection('ocorrencias')"><i class='bx bx-file'></i> Ocorrências</a>
+            <a class="nav-item" data-section="processos" onclick="showSection('processos')"><i class='bx bx-folder-open'></i> Processos Criminais</a>
             <a class="nav-item" data-section="pessoas" onclick="showSection('pessoas')"><i class='bx bx-group'></i> Pessoas</a>
             <a class="nav-item" data-section="detencoes" onclick="showSection('detencoes')"><i class='bx bx-lock-alt'></i> Detenções</a>
             <a class="nav-item" data-section="evidencias" onclick="showSection('evidencias')"><i class='bx bx-box'></i> Evidências</a>

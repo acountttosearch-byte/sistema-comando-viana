@@ -8,6 +8,7 @@
         <main class="main" id="main-content">
             @include('partials.sections.inicio')
             @include('partials.sections.ocorrencias')
+            @include('partials.sections.processos')
             @include('partials.sections.pessoas')
             @include('partials.sections.detencoes')
             @include('partials.sections.evidencias')

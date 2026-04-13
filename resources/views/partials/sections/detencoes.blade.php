@@ -4,7 +4,8 @@
         <button class="btn-primary" onclick="formNovaDetencao()"><i class='bx bx-plus'></i> Nova Detenção</button>
     </div>
     <div class="filters">
-        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-det-busca" placeholder="Buscar por nome, BI, nº detenção..."><button class="btn-ghost btn-sm" onclick="loadDetencoes()" style="border:none;"><i class='bx bx-search'></i></button></div>
+        <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-det-busca" placeholder="Buscar por nome, BI, nº detenção..."></div>
+        <button class="btn-primary btn-sm" onclick="loadDetencoes()"><i class='bx bx-search'></i> Buscar</button>
         <select id="f-det-estado" onchange="loadDetencoes()"><option value="">Estado</option></select>
         @if(in_array(auth()->user()->perfil->nome, ['admin', 'comandante']))
         <select id="f-det-unidade" onchange="loadDetencoes()"><option value="">Unidade</option></select>

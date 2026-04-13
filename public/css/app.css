@@ -856,7 +856,7 @@ body {
 
 
 /* ══════════════════
-   SEARCH INLINE BTN
+   SEARCH INLINE BTN (legacy, kept for compatibility)
    ══════════════════ */
 .search-filter .btn-ghost {
     padding: 4px 6px;
@@ -870,6 +870,139 @@ body {
     color: var(--navy);
     background: var(--bg);
 }
+
+/* ══════════════════
+   EVIDENCE GRID
+   ══════════════════ */
+.evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.ev-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.ev-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--navy-3);
+}
+
+.ev-card-thumb {
+    height: 120px;
+    background: var(--bg-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--text-4);
+}
+
+.ev-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ev-card-body {
+    padding: 12px;
+}
+
+.ev-card-body strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.ev-card-body .ev-card-desc {
+    font-size: 12px;
+    color: var(--text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ev-card-body .ev-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-4);
+}
+
+/* ══════════════════
+   EVIDENCE PREVIEW MODAL
+   ══════════════════ */
+.ev-preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn .2s ease;
+}
+
+.ev-preview-modal {
+    background: var(--white);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-lg);
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.ev-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.ev-preview-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    margin-right: 12px;
+}
+
+.ev-preview-body {
+    padding: 20px;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.text-muted {
+    color: var(--text-3);
+}
+
 /* ══════════════════
    TABS
    ══════════════════ */
