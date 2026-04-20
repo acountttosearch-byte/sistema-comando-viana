@@ -139,6 +139,7 @@ Route::middleware('auth:web')->group(function () {
 
     // Relatórios
     Route::get('/relatorios', [RelatorioController::class, 'index']);
+    Route::get('/relatorios/{relatorio}', [RelatorioController::class, 'show']);
     Route::post('/relatorios/gerar', [RelatorioController::class, 'gerar']);
 
     // Turnos

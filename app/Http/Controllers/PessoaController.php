@@ -23,7 +23,21 @@ class PessoaController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['nome' => 'required|string|max:200']);
+        $request->validate([
+            'nome' => 'required|string|max:200',
+            'bi' => 'nullable|string|max:20|unique:pessoas,bi',
+            'telefone' => 'nullable|string|max:20|unique:pessoas,telefone',
+            'sexo' => 'nullable|in:M,F',
+            'data_nascimento' => 'nullable|date|before_or_equal:today',
+            'nacionalidade' => 'nullable|string|max:100',
+            'morada' => 'nullable|string|max:300',
+            'bairro' => 'nullable|string|max:100',
+            'alcunha' => 'nullable|string|max:100',
+        ], [
+            'bi.unique' => 'Já existe uma pessoa registada com este número de BI.',
+            'telefone.unique' => 'Já existe uma pessoa registada com este número de telefone.',
+            'data_nascimento.before_or_equal' => 'A data de nascimento não pode ser no futuro.',
+        ]);
         $p = Pessoa::create($request->all());
         Log::registar('criar', 'pessoas', $p->id, "Pessoa {$p->nome} registada");
         return response()->json(['success' => true, 'pessoa' => $p], 201);
@@ -39,6 +53,16 @@ class PessoaController extends Controller
 
     public function update(Request $request, Pessoa $pessoa)
     {
+        $request->validate([
+            'nome' => 'sometimes|required|string|max:200',
+            'bi' => 'nullable|string|max:20|unique:pessoas,bi,' . $pessoa->id,
+            'telefone' => 'nullable|string|max:20|unique:pessoas,telefone,' . $pessoa->id,
+            'data_nascimento' => 'nullable|date|before_or_equal:today',
+        ], [
+            'bi.unique' => 'Já existe uma pessoa registada com este número de BI.',
+            'telefone.unique' => 'Já existe uma pessoa registada com este número de telefone.',
+            'data_nascimento.before_or_equal' => 'A data de nascimento não pode ser no futuro.',
+        ]);
         $pessoa->update($request->all());
         Log::registar('editar', 'pessoas', $pessoa->id, "Pessoa actualizada");
         return response()->json(['success' => true, 'pessoa' => $pessoa->fresh()]);

@@ -30,12 +30,19 @@ class AgenteController extends Controller
         $request->validate([
             'nome' => 'required|string|max:200',
             'nip' => 'required|string|max:50|unique:agentes,nip',
+            'bi' => 'nullable|string|max:20|unique:agentes,bi',
             'email' => 'required|email|unique:users,email',
+            'telefone' => 'nullable|string|max:20|unique:agentes,telefone',
             'patente_id' => 'required|exists:patentes,id',
             'cargo' => 'required|string|max:100',
             'unidade_id' => 'required|exists:unidades,id',
             'perfil_id' => 'required|exists:perfis,id',
             'estado' => 'required|in:activo,inactivo',
+        ], [
+            'nip.unique' => 'Já existe um agente com este NIP.',
+            'bi.unique' => 'Já existe um agente registado com este número de BI.',
+            'email.unique' => 'Já existe um utilizador com este email.',
+            'telefone.unique' => 'Já existe um agente registado com este número de telefone.',
         ]);
 
         return DB::transaction(function () use ($request) {
@@ -70,7 +77,13 @@ class AgenteController extends Controller
         $request->validate([
             'nome' => 'required|string|max:200',
             'nip' => 'required|string|max:50|unique:agentes,nip,' . $agente->id,
+            'bi' => 'nullable|string|max:20|unique:agentes,bi,' . $agente->id,
+            'telefone' => 'nullable|string|max:20|unique:agentes,telefone,' . $agente->id,
             'estado' => 'required|in:activo,inactivo,suspenso,transferido',
+        ], [
+            'nip.unique' => 'Já existe um agente com este NIP.',
+            'bi.unique' => 'Já existe um agente registado com este número de BI.',
+            'telefone.unique' => 'Já existe um agente registado com este número de telefone.',
         ]);
 
         $agente->update($request->only(['nome', 'nip', 'bi', 'data_nascimento', 'sexo', 'telefone', 'morada', 'patente_id', 'cargo', 'unidade_id', 'estado']));

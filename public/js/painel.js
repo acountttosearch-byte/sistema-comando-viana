@@ -92,6 +92,17 @@ function validarEmail(val) {
     return null;
 }
 
+function validarIdadeMenor(val) {
+    if (!val) return null;
+    const nasc = new Date(val);
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nasc.getFullYear();
+    const m = hoje.getMonth() - nasc.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
+    if (idade < 18) return 'Atenção: Pessoa menor de idade (' + idade + ' anos).';
+    return null;
+}
+
 function validarCampo(id, validador) {
     const el = document.getElementById(id);
     if (!el) return null;
@@ -545,6 +556,10 @@ async function submitNovaPessoa(retOcId) {
     erros = erros.filter(e => e !== null);
     if (erros.length) { toast('Corrija os erros assinalados.', 'err'); return; }
 
+    // Aviso de menor de idade (não bloqueante)
+    const avisoIdade = validarIdadeMenor(v('npes-nasc'));
+    if (avisoIdade) toast(avisoIdade, 'warn');
+
     showLoad();
     const d = await api('/pessoas', { method: 'POST', body: JSON.stringify({ nome: v('npes-nome'), alcunha: v('npes-alcunha'), bi: v('npes-bi') || null, sexo: v('npes-sexo') || null, data_nascimento: v('npes-nasc') || null, nacionalidade: v('npes-nac'), telefone: v('npes-tel') || null, bairro: v('npes-bairro') || null, morada: v('npes-morada') || null, caracteristicas_fisicas: v('npes-car') || null, observacoes: v('npes-obs') || null }) });
     hideLoad();
@@ -610,6 +625,9 @@ function formNovaDetencao() {
 async function submitNovaDetencao() {
     limparErros();
     let e = [validarObrigatorio('ndet-pes', 'Pessoa'), validarObrigatorio('ndet-oc', 'Ocorrencia'), validarObrigatorio('ndet-data', 'Data'), validarObrigatorio('ndet-local', 'Local'), validarObrigatorio('ndet-motivo', 'Motivo')].filter(x => x);
+    // Validar data não futura
+    const dataDetVal = v('ndet-data');
+    if (dataDetVal && new Date(dataDetVal) > new Date()) { e.push('Data da detenção não pode ser no futuro.'); toast('Data da detenção não pode ser no futuro.', 'err'); }
     if (e.length) { toast('Corrija os erros.', 'err'); return; }
     showLoad(); const d = await api('/detencoes', { method: 'POST', body: JSON.stringify({ pessoa_id: v('ndet-pes'), ocorrencia_id: v('ndet-oc'), data_detencao: v('ndet-data'), local_detencao: v('ndet-local'), motivo: v('ndet-motivo'), observacoes: v('ndet-obs') }) }); hideLoad();
     if (d?.success) { toast('Detencao registada: ' + d.detencao.numero_detencao, 'ok'); voltarPara('detencoes'); }
@@ -705,18 +723,164 @@ async function viewArmamento(id) {
 async function loadMensagens(tipo, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } const d = await api('/mensagens/' + (tipo === 'inbox' ? 'inbox' : 'enviadas')); if (!d) return; const items = d.data || []; const c = document.getElementById('list-msg'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem mensagens.</div>'; return; } c.innerHTML = items.map(m => `<div class="tbl-row" style="${!m.lida ? 'font-weight:600;background:var(--navy-light);' : ''}"><div class="col c0">${!m.lida ? '<i class="bx bxs-circle" style="color:var(--navy);font-size:7px;"></i>' : ''}</div><div class="col c2">${tipo === 'inbox' ? (m.remetente?.nome || '-') : (m.destinatario?.nome || '-')}</div><div class="col c3">${m.titulo}</div><div class="col c1">${m.prioridade === 'urgente' ? '<span class="badge badge-red">Urgente</span>' : '<span class="badge badge-gray">Normal</span>'}</div><div class="col c1">${fDT(m.created_at)}</div></div>`).join(''); }
 
 async function loadRelatorios() { loadRelatoriosAnteriores(); }
-async function loadRelatoriosAnteriores() { const p = new URLSearchParams({ busca: v('f-rel-busca') }); const d = await api('/relatorios?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-rel'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem relatórios.</div>'; return; } c.innerHTML = items.map(r => `<div class="tbl-row"><div class="col c2">${r.tipo_relatorio?.nome || '-'}</div><div class="col c2">${fDate(r.periodo_inicio)} - ${fDate(r.periodo_fim)}</div><div class="col c2">${r.unidade?.nome || 'Todas'}</div><div class="col c1">${fDate(r.created_at)}</div></div>`).join(''); }
+async function loadRelatoriosAnteriores() {
+    const p = new URLSearchParams({ busca: v('f-rel-busca') });
+    const d = await api('/relatorios?' + p);
+    if (!d) return;
+    const items = d.data || [];
+    const c = document.getElementById('list-rel');
+    if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem relatórios.</div>'; return; }
+    c.innerHTML = items.map(r => `<div class="tbl-row">
+        <div class="col c2">${r.tipo_relatorio?.nome || '-'}</div>
+        <div class="col c2">${fDate(r.periodo_inicio)} - ${fDate(r.periodo_fim)}</div>
+        <div class="col c2">${r.unidade?.nome || 'Todas'}</div>
+        <div class="col c1">${fDate(r.created_at)}</div>
+        <div class="col c1">
+            <button class="btn-icon" onclick="viewRelatorio(${r.id})" title="Ver detalhes"><i class='bx bx-show'></i></button>
+            <button class="btn-icon" onclick="exportPdfRelatorioAnterior('${r.periodo_inicio}', '${r.periodo_fim}', '${r.unidade_id || ''}')" title="Exportar PDF"><i class='bx bx-download'></i></button>
+        </div>
+    </div>`).join('');
+}
+
 // ══════════════════
-// RELATORIOS — CORRIGIDO
+// RELATORIOS — GERAÇÃO E VISUALIZAÇÃO
 // ══════════════════
+
+// Renderizar gráfico de barras simples em HTML/CSS
+function renderBarChart(containerId, items, labelKey, valueKey, color) {
+    const el = document.getElementById(containerId);
+    if (!el || !items || !items.length) { if (el) el.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; }
+    const max = Math.max(...items.map(i => i[valueKey] || 0));
+    el.innerHTML = items.map(i => {
+        const pct = max > 0 ? ((i[valueKey] || 0) / max * 100) : 0;
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="min-width:140px;font-size:13px;text-align:right;color:var(--text-secondary)">${i[labelKey] || '-'}</span>
+            <div style="flex:1;background:var(--bg-hover);border-radius:4px;height:22px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:${color || 'var(--navy)'};border-radius:4px;transition:width .4s;"></div>
+            </div>
+            <span style="min-width:35px;font-size:13px;font-weight:600;">${i[valueKey] || 0}</span>
+        </div>`;
+    }).join('');
+}
+
+// Nomes dos meses
+const nomesMes = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+// Renderizar stats cards genéricos
+function renderRelStats(cards) {
+    return cards.map(c => `<div class="stat-card">
+        <div class="stat-icon ${c.cor}"><i class='bx ${c.icon}'></i></div>
+        <div><span class="stat-value">${c.valor}</span><span class="stat-label">${c.label}</span></div>
+    </div>`).join('');
+}
+
+// Renderizar conteúdo do relatório conforme tipo
+function renderRelatorioConteudo(dt, tipoId) {
+    let statsHtml = '';
+    let chartsHtml = '';
+
+    if (tipoId === 1 || tipoId === 5) {
+        // Criminalidade ou Estatístico
+        const cards = [
+            { icon: 'bx-file', cor: 'blue', valor: dt.total_ocorrencias, label: 'Ocorrências' },
+            { icon: 'bx-check-circle', cor: 'green', valor: dt.ocorrencias_resolvidas, label: 'Resolvidas' },
+            { icon: 'bx-error-circle', cor: 'orange', valor: dt.ocorrencias_abertas || 0, label: 'Abertas' },
+            { icon: 'bx-trending-up', cor: 'blue', valor: (dt.taxa_resolucao || 0) + '%', label: 'Taxa Resolução' },
+            { icon: 'bx-lock-alt', cor: 'red', valor: dt.total_detencoes, label: 'Detenções' },
+        ];
+        if (tipoId === 5) {
+            cards.push({ icon: 'bx-search-alt', cor: 'blue', valor: dt.total_investigacoes || 0, label: 'Investigações' });
+            cards.push({ icon: 'bx-folder', cor: 'green', valor: dt.total_processos || 0, label: 'Processos' });
+            cards.push({ icon: 'bx-car', cor: 'orange', valor: dt.total_patrulhas || 0, label: 'Patrulhas' });
+        }
+        statsHtml = renderRelStats(cards);
+        chartsHtml = `<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Crimes por Tipo</h4><div id="chart-crimes-tipo"></div></div>
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Crimes por Bairro</h4><div id="chart-crimes-bairro"></div></div>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Por Prioridade</h4><div id="chart-crimes-prio"></div></div>
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Por Mês</h4><div id="chart-crimes-mes"></div></div>
+        </div>`;
+    } else if (tipoId === 2) {
+        // Detenções
+        statsHtml = renderRelStats([
+            { icon: 'bx-lock-alt', cor: 'red', valor: dt.total_detencoes, label: 'Total Detenções' },
+            { icon: 'bx-log-out', cor: 'green', valor: dt.libertados || 0, label: 'Libertados' },
+            { icon: 'bx-shield', cor: 'orange', valor: dt.em_custodia || 0, label: 'Em Custódia' },
+            { icon: 'bx-building-house', cor: 'blue', valor: dt.apresentados_tribunal || 0, label: 'Tribunal' },
+        ]);
+        chartsHtml = `<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Detenções por Unidade</h4><div id="chart-det-unidade"></div></div>
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Top Crimes Associados</h4><div id="chart-det-crimes"></div></div>
+        </div>
+        <div style="max-width:50%;margin-top:20px;">
+            <h4 style="margin-bottom:10px;color:var(--text-primary)">Detenções por Mês</h4><div id="chart-det-mes"></div>
+        </div>`;
+    } else if (tipoId === 3) {
+        // Patrulhas
+        statsHtml = renderRelStats([
+            { icon: 'bx-car', cor: 'blue', valor: dt.total_patrulhas, label: 'Total Patrulhas' },
+            { icon: 'bx-check-circle', cor: 'green', valor: dt.concluidas || 0, label: 'Concluídas' },
+            { icon: 'bx-run', cor: 'orange', valor: dt.em_curso || 0, label: 'Em Curso' },
+            { icon: 'bx-error', cor: 'red', valor: dt.total_incidentes || 0, label: 'Incidentes' },
+        ]);
+        chartsHtml = `<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Patrulhas por Zona</h4><div id="chart-pat-zona"></div></div>
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Patrulhas por Turno</h4><div id="chart-pat-turno"></div></div>
+        </div>`;
+    } else if (tipoId === 4) {
+        // Desempenho
+        statsHtml = renderRelStats([
+            { icon: 'bx-file', cor: 'blue', valor: dt.total_ocorrencias, label: 'Total Ocorrências' },
+            { icon: 'bx-check-circle', cor: 'green', valor: dt.ocorrencias_resolvidas, label: 'Resolvidas' },
+            { icon: 'bx-trending-up', cor: 'blue', valor: (dt.taxa_resolucao_global || 0) + '%', label: 'Taxa Global' },
+            { icon: 'bx-lock-alt', cor: 'red', valor: dt.total_detencoes, label: 'Detenções' },
+        ]);
+        chartsHtml = `<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Taxa Resolução por Unidade</h4><div id="chart-desemp-unid"></div></div>
+            <div><h4 style="margin-bottom:10px;color:var(--text-primary)">Agentes Mais Activos</h4><div id="chart-desemp-agentes"></div></div>
+        </div>
+        <div style="max-width:50%;margin-top:20px;">
+            <h4 style="margin-bottom:10px;color:var(--text-primary)">Detenções por Agente</h4><div id="chart-desemp-det-ag"></div>
+        </div>`;
+    }
+
+    return { statsHtml, chartsHtml };
+}
+
+// Popular gráficos após renderizar o HTML
+function populateRelCharts(dt, tipoId) {
+    if (tipoId === 1 || tipoId === 5) {
+        renderBarChart('chart-crimes-tipo', dt.crimes_por_tipo || [], 'tipo', 'total', '#0078d4');
+        renderBarChart('chart-crimes-bairro', dt.crimes_por_bairro || [], 'bairro', 'total', '#e8590c');
+        renderBarChart('chart-crimes-prio', dt.crimes_por_prioridade || [], 'prioridade', 'total', '#6f42c1');
+        const mesList = (dt.crimes_por_mes || []).map(m => ({ mes: nomesMes[m.mes] || m.mes, total: m.total }));
+        renderBarChart('chart-crimes-mes', mesList, 'mes', 'total', '#28a745');
+    } else if (tipoId === 2) {
+        renderBarChart('chart-det-unidade', dt.detencoes_por_unidade || [], 'unidade', 'total', '#e8590c');
+        renderBarChart('chart-det-crimes', dt.top_crimes_associados || [], 'tipo', 'total', '#0078d4');
+        const mesList = (dt.detencoes_por_mes || []).map(m => ({ mes: nomesMes[m.mes] || m.mes, total: m.total }));
+        renderBarChart('chart-det-mes', mesList, 'mes', 'total', '#28a745');
+    } else if (tipoId === 3) {
+        renderBarChart('chart-pat-zona', dt.patrulhas_por_zona || [], 'zona', 'total', '#0078d4');
+        renderBarChart('chart-pat-turno', dt.patrulhas_por_turno || [], 'turno', 'total', '#6f42c1');
+    } else if (tipoId === 4) {
+        const unidData = (dt.taxa_por_unidade || []).map(u => ({ unidade: u.unidade, total: u.taxa }));
+        renderBarChart('chart-desemp-unid', unidData, 'unidade', 'total', '#28a745');
+        renderBarChart('chart-desemp-agentes', dt.agentes_mais_activos || [], 'agente', 'total', '#0078d4');
+        renderBarChart('chart-desemp-det-ag', dt.detencoes_por_agente || [], 'agente', 'total', '#e8590c');
+    }
+}
+
 async function gerarRelatorio() {
     const tipo = v('rel-tipo');
     const di = v('rel-di');
     const df = v('rel-df');
 
-    if (!tipo) { toast('Selecione o tipo de relatorio.', 'err'); return; }
-    if (!di || !df) { toast('Selecione o periodo (data inicio e fim).', 'err'); return; }
-    if (new Date(di) > new Date(df)) { toast('Data inicio nao pode ser maior que data fim.', 'err'); return; }
+    if (!tipo) { toast('Selecione o tipo de relatório.', 'err'); return; }
+    if (!di || !df) { toast('Selecione o período (data início e fim).', 'err'); return; }
+    if (new Date(di) > new Date(df)) { toast('Data início não pode ser maior que data fim.', 'err'); return; }
 
     showLoad();
     const d = await api('/relatorios/gerar', {
@@ -732,67 +896,57 @@ async function gerarRelatorio() {
 
     if (!d?.success) return;
 
-    const dt = d.dados;
-    toast('Relatorio gerado com sucesso.', 'ok');
+    toast('Relatório gerado com sucesso.', 'ok');
 
-    // Mostrar resultado
-    document.getElementById('rel-resultado').style.display = 'block';
+    // Abrir perfil do relatório gerado
+    viewRelatorio(d.relatorio.id);
+}
 
-    // Metricas
-    document.getElementById('rel-stats').innerHTML = `
-        <div class="stat-card">
-            <div class="stat-icon blue"><i class='bx bx-file'></i></div>
-            <div><span class="stat-value">${dt.total_ocorrencias}</span><span class="stat-label">Ocorrencias</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green"><i class='bx bx-check-circle'></i></div>
-            <div><span class="stat-value">${dt.ocorrencias_resolvidas}</span><span class="stat-label">Resolvidas</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon orange"><i class='bx bx-error-circle'></i></div>
-            <div><span class="stat-value">${dt.ocorrencias_abertas || 0}</span><span class="stat-label">Abertas</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon blue"><i class='bx bx-trending-up'></i></div>
-            <div><span class="stat-value">${dt.taxa_resolucao}%</span><span class="stat-label">Taxa Resolucao</span></div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon red"><i class='bx bx-lock-alt'></i></div>
-            <div><span class="stat-value">${dt.total_detencoes}</span><span class="stat-label">Detencoes</span></div>
-        </div>
-    `;
+// Ver relatório individual (perfil)
+async function viewRelatorio(id) {
+    showLoad();
+    const d = await api('/relatorios/' + id);
+    hideLoad();
+    if (!d) return;
 
-    // Se nao tem dados, avisa
-    if (dt.total_ocorrencias === 0) {
-        toast('Nenhuma ocorrencia encontrada no periodo seleccionado. Tente um periodo mais amplo.', 'warn');
-    }
+    const r = d;
+    const dt = typeof r.dados === 'string' ? JSON.parse(r.dados) : (r.dados || {});
+    const tipoId = r.tipo_relatorio_id;
+    const tipoNome = r.tipo_relatorio?.nome || 'Relatório';
+    const geradoPorNome = r.gerado_por_rel?.nome || r.gerado_por?.nome || '-';
 
-    loadRelatorios();
+    const { statsHtml, chartsHtml } = renderRelatorioConteudo(dt, tipoId);
+
+    let h = `<div class="page-header"><div><h1 class="page-title">${tipoNome}</h1>
+        <p class="page-desc">Período: ${fDate(r.periodo_inicio)} — ${fDate(r.periodo_fim)} | Unidade: ${r.unidade?.nome || 'Todas'} | Gerado por: ${geradoPorNome} em ${fDT(r.created_at)}</p></div>
+        <div style="display:flex;gap:8px;">
+            <button class="btn-primary" onclick="exportPdfRelatorioAnterior('${r.periodo_inicio}', '${r.periodo_fim}', '${r.unidade_id || ''}')"><i class='bx bx-download'></i> PDF</button>
+            <button class="btn-ghost" onclick="voltarPara('relatorios')"><i class='bx bx-arrow-back'></i> Voltar</button>
+        </div>
+    </div>
+    <div class="stats-grid">${statsHtml}</div>
+    <div>${chartsHtml}</div>`;
+
+    renderMain('relatorios', h);
+
+    // Popular gráficos após render
+    setTimeout(() => populateRelCharts(dt, tipoId), 50);
+}
+
+function exportPdfRelatorioAnterior(di, df, un) {
+    const params = new URLSearchParams({ periodo_inicio: di, periodo_fim: df });
+    if (un && un !== 'null' && un !== 'undefined') params.append('unidade_id', un);
+    window.open('/api/pdf/relatorio-criminalidade?' + params.toString(), '_blank');
 }
 
 function exportPdfRelatorio() {
     const di = v('rel-di');
     const df = v('rel-df');
-
-    if (!di || !df) {
-        toast('Primeiro preencha as datas e gere o relatorio.', 'err');
-        return;
-    }
-
-    if (new Date(di) > new Date(df)) {
-        toast('Data inicio nao pode ser maior que data fim.', 'err');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        periodo_inicio: di,
-        periodo_fim: df,
-    });
-
+    if (!di || !df) { toast('Primeiro preencha as datas e gere o relatório.', 'err'); return; }
+    if (new Date(di) > new Date(df)) { toast('Data início não pode ser maior que data fim.', 'err'); return; }
+    const params = new URLSearchParams({ periodo_inicio: di, periodo_fim: df });
     const un = v('rel-unidade');
     if (un) params.append('unidade_id', un);
-
-    // Abre em nova janela — a sessão é partilhada
     window.open('/api/pdf/relatorio-criminalidade?' + params.toString(), '_blank');
 }
 
@@ -934,12 +1088,7 @@ async function loadConfig() { const d = await api('/configuracoes'); if (!d) ret
 
 async function checkNotifs() { try { const d = await api('/mensagens/nao-lidas'); if (d?.total > 0) { const dot = document.getElementById('notif-dot'); if (dot) dot.style.display = 'block'; } } catch (e) { } setTimeout(checkNotifs, 60000); }
 
-// ══════════════════
-// PDF
-// ══════════════════
-function exportPdfRelatorio() { const di = v('rel-di'), df = v('rel-df'); if (!di || !df) { toast('Selecione o periodo.', 'err'); return; } const p = new URLSearchParams({ periodo_inicio: di, periodo_fim: df }); const un = v('rel-unidade'); if (un) p.append('unidade_id', un); window.open('/api/pdf/relatorio-criminalidade?' + p, '_blank'); }
-function exportPdfOcorrencia(id) { window.open('/api/pdf/ocorrencia/' + id, '_blank'); }
-function exportPdfAgentes() { window.open('/api/pdf/agentes?estado=activo', '_blank'); }
+// (PDF functions consolidated above)
 
 // ══════════════════
 // PROCESSOS CRIMINAIS
