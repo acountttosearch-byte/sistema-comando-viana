@@ -34,7 +34,7 @@
                     <span class="user-role-tag">{{ auth()->user()->perfil->descricao }}</span>
                 </div>
                 <div class="user-menu-divider"></div>
-                <a class="user-menu-item" href="#" onclick="showSection('configuracoes')"><i class='bx bx-cog'></i> Configurações</a>
+                <button type="button" class="user-menu-item" onclick="showSection('configuracoes')"><i class='bx bx-cog'></i> Configurações</button>
                 <div class="user-menu-divider"></div>
                 <form action="{{ route('logout') }}" method="POST" id="logout-form" style="margin:0;">
                     @csrf

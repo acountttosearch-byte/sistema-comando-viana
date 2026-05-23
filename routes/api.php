@@ -35,16 +35,16 @@ Route::middleware('auth:web')->group(function () {
 
     // Agentes
     Route::get('/agentes', [AgenteController::class, 'index']);
-    Route::post('/agentes', [AgenteController::class, 'store']);
+    Route::post('/agentes', [AgenteController::class, 'store'])->middleware('perfil:admin');
     Route::get('/agentes/{agente}', [AgenteController::class, 'show']);
-    Route::put('/agentes/{agente}', [AgenteController::class, 'update']);
-    Route::patch('/agentes/{agente}/toggle-estado', [AgenteController::class, 'toggleEstado']);
+    Route::put('/agentes/{agente}', [AgenteController::class, 'update'])->middleware('perfil:admin');
+    Route::patch('/agentes/{agente}/toggle-estado', [AgenteController::class, 'toggleEstado'])->middleware('perfil:admin');
 
     // Unidades
     Route::get('/unidades', [UnidadeController::class, 'index']);
-    Route::post('/unidades', [UnidadeController::class, 'store']);
-    Route::put('/unidades/{unidade}', [UnidadeController::class, 'update']);
-    Route::patch('/unidades/{unidade}/toggle-estado', [UnidadeController::class, 'toggleEstado']);
+    Route::post('/unidades', [UnidadeController::class, 'store'])->middleware('perfil:admin');
+    Route::put('/unidades/{unidade}', [UnidadeController::class, 'update'])->middleware('perfil:admin');
+    Route::patch('/unidades/{unidade}/toggle-estado', [UnidadeController::class, 'toggleEstado'])->middleware('perfil:admin');
     Route::get('/unidades/{unidade}/estatisticas', [UnidadeController::class, 'estatisticas']);
     Route::get('/esquadras', [UnidadeController::class, 'esquadras']);
 
@@ -90,29 +90,29 @@ Route::middleware('auth:web')->group(function () {
 
     // Patrulhas
     Route::get('/patrulhas', [PatrulhaController::class, 'index']);
-    Route::post('/patrulhas', [PatrulhaController::class, 'store']);
-    Route::patch('/patrulhas/{patrulha}/estado', [PatrulhaController::class, 'actualizarEstado']);
+    Route::post('/patrulhas', [PatrulhaController::class, 'store'])->middleware('perfil:admin,comandante,chefe_esquadra');
+    Route::patch('/patrulhas/{patrulha}/estado', [PatrulhaController::class, 'actualizarEstado'])->middleware('perfil:admin,comandante,chefe_esquadra');
     Route::post('/patrulhas/{patrulha}/incidentes', [PatrulhaController::class, 'registarIncidente']);
 
     // Alertas
     Route::get('/alertas', [AlertaController::class, 'index']);
-    Route::post('/alertas', [AlertaController::class, 'store']);
+    Route::post('/alertas', [AlertaController::class, 'store'])->middleware('perfil:admin,comandante,chefe_esquadra');
     Route::patch('/alertas/{alerta}/visualizar', [AlertaController::class, 'confirmarVisualizacao']);
     Route::patch('/alertas/{alerta}/resolver', [AlertaController::class, 'resolver']);
 
     // Viaturas
     Route::get('/viaturas', [ViaturaController::class, 'index']);
     Route::get('/viaturas/{viatura}', [ViaturaController::class, 'show']);
-    Route::post('/viaturas', [ViaturaController::class, 'store']);
-    Route::post('/viaturas/{viatura}/atribuir', [ViaturaController::class, 'atribuir']);
-    Route::patch('/viatura-atribuicoes/{atribuicao}/devolver', [ViaturaController::class, 'devolver']);
+    Route::post('/viaturas', [ViaturaController::class, 'store'])->middleware('perfil:admin,comandante,chefe_esquadra');
+    Route::post('/viaturas/{viatura}/atribuir', [ViaturaController::class, 'atribuir'])->middleware('perfil:admin,comandante,chefe_esquadra');
+    Route::patch('/viatura-atribuicoes/{atribuicao}/devolver', [ViaturaController::class, 'devolver'])->middleware('perfil:admin,comandante,chefe_esquadra');
 
     // Armamento
     Route::get('/armamento', [ArmamentoController::class, 'index']);
     Route::get('/armamento/{armamento}', [ArmamentoController::class, 'show']);
-    Route::post('/armamento', [ArmamentoController::class, 'store']);
-    Route::post('/armamento/{armamento}/atribuir', [ArmamentoController::class, 'atribuir']);
-    Route::patch('/armamento/{armamento}/devolver', [ArmamentoController::class, 'devolver']);
+    Route::post('/armamento', [ArmamentoController::class, 'store'])->middleware('perfil:admin,comandante,chefe_esquadra');
+    Route::post('/armamento/{armamento}/atribuir', [ArmamentoController::class, 'atribuir'])->middleware('perfil:admin,comandante,chefe_esquadra');
+    Route::patch('/armamento/{armamento}/devolver', [ArmamentoController::class, 'devolver'])->middleware('perfil:admin,comandante,chefe_esquadra');
 
     // Mandados
     Route::get('/mandados', [MandadoController::class, 'index']);
@@ -140,7 +140,7 @@ Route::middleware('auth:web')->group(function () {
     // Relatórios
     Route::get('/relatorios', [RelatorioController::class, 'index']);
     Route::get('/relatorios/{relatorio}', [RelatorioController::class, 'show']);
-    Route::post('/relatorios/gerar', [RelatorioController::class, 'gerar']);
+    Route::post('/relatorios/gerar', [RelatorioController::class, 'gerar'])->middleware('perfil:admin,comandante,chefe_esquadra');
 
     // Turnos
     Route::get('/turnos', [TurnoController::class, 'turnos']);

@@ -5,23 +5,39 @@ namespace App\Http\Controllers;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
-        if (Auth::check()) return redirect()->route('painel');
+        if (Auth::check()) {
+            return redirect()->route('painel');
+        }
+
         return view('auth.login');
     }
 
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'required|email|max:150',
+            'password' => 'required|string|max:255',
         ]);
 
-        if (Auth::attempt($request->only('email', 'password'))) {
+        $email = Str::lower(trim($request->email));
+        $key = 'login:' . $email . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            throw ValidationException::withMessages([
+                'email' => 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
+            ]);
+        }
+
+        if (Auth::attempt(['email' => $email, 'password' => $request->password, 'estado' => 'activo'])) {
+            RateLimiter::clear($key);
             $request->session()->regenerate();
 
             $user = Auth::user();
@@ -35,7 +51,11 @@ class AuthController extends Controller
             return redirect()->intended(route('painel'));
         }
 
-        return back()->withErrors(['email' => 'Credenciais inválidas.']);
+        RateLimiter::hit($key, 300);
+
+        return back()
+            ->withErrors(['email' => 'Credenciais invalidas ou utilizador inactivo.'])
+            ->onlyInput('email');
     }
 
     public function logout(Request $request)

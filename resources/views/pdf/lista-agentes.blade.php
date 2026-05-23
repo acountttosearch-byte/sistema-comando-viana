@@ -16,7 +16,7 @@
     </div>
 
     <table class="pdf-table">
-        <thead><tr><th>#</th><th>NIP</th><th>Nome</th><th>Patente</th><th>Cargo</th><th>Unidade</th><th>Telefone</th><th>Estado</th></tr></thead>
+        <thead><tr><th>#</th><th>NIP</th><th>Nome</th><th>Patente</th><th>Perfil</th><th>Unidade</th><th>Telefone</th><th>Estado</th></tr></thead>
         <tbody>
             @foreach($agentes as $i => $ag)
             <tr>
@@ -24,7 +24,7 @@
                 <td class="font-bold">{{ $ag->nip }}</td>
                 <td>{{ $ag->nome }}</td>
                 <td>{{ $ag->patente?->nome }}</td>
-                <td>{{ $ag->cargo }}</td>
+                <td>{{ $ag->user?->perfil?->descricao ?? $ag->user?->perfil?->nome }}</td>
                 <td>{{ $ag->unidade?->nome }}</td>
                 <td>{{ $ag->telefone ?? '-' }}</td>
                 <td><span class="pdf-badge {{ $ag->estado === 'activo' ? 'pdf-badge-green' : 'pdf-badge-gray' }}">{{ $ag->estado }}</span></td>
@@ -32,8 +32,6 @@
             @endforeach
         </tbody>
     </table>
-
-    <div class="pdf-footer">{{ $entidade }} - SCGD | {{ $data_geracao }} | {{ $gerado_por }}</div>
 </div>
 </body>
 </html>

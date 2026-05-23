@@ -26,7 +26,6 @@
     .pdf-table td { border: 1px solid #e5e7eb; padding: 5px 8px; }
     .pdf-table tr:nth-child(even) { background: #fafafa; }
     .section-title { font-size: 13px; font-weight: bold; color: #0A2647; margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
-    .pdf-footer { position: fixed; bottom: 20px; left: 30px; right: 30px; font-size: 8px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
     .font-bold { font-weight: bold; }

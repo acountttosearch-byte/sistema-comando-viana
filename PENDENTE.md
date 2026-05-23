@@ -1,5 +1,0 @@
-a sessão relatórios ainda apresenta sérios problemas faça uma verificação mais aprofundada pra melhorar-lo;
-outra coisas é que quando são gerados, os dados são carregados abaixo... ñ deve ser dessa forma! crie o perfil do relatório igual ao da sessão pessoas ou até mesmo ocorrências, que deve aparecer quando clicam no relatório criado que vai estar na tabela relatórios anteriores.
-
-SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'unidade_id' in where clause is ambiguous (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: sistema_comando_viana, SQL: select tipos_crime.nome as tipo, COUNT(*) as total from `detencoes` inner join `ocorrencias` on `detencoes`.`ocorrencia_id` = `ocorrencias`.`id` inner join `tipos_crime` on `ocorrencias`.`tipo_crime_id` = `tipos_crime`.`id` where date(`data_detencao`) >= 2025-01-01 and date(`data_detencao`) <= 2025-02-01 and `unidade_id` = 4 and `detencoes`.`deleted_at` is null group by `tipos_crime`.`nome` order by `total` desc limit 10)
-este erro por exemplo aparece quando tenta se criar uma relatório de detenção de uma unidade específica, corrija também.

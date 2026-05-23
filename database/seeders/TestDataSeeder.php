@@ -43,15 +43,15 @@ class TestDataSeeder extends Seeder
         $this->command->info('   → Agentes...');
 
         $agentesConfig = [
-            ['nome' => 'Comissário António Fernandes', 'cargo' => 'Comandante Municipal', 'unidade' => 1, 'patente' => 1, 'perfil' => 2],
-            ['nome' => 'Subcomissário Carlos Domingos', 'cargo' => 'Chefe de Esquadra', 'unidade' => 2, 'patente' => 2, 'perfil' => 3],
-            ['nome' => 'Subcomissário Manuel Pereira', 'cargo' => 'Chefe de Esquadra', 'unidade' => 3, 'patente' => 2, 'perfil' => 3],
-            ['nome' => 'Intendente Rosa Santos', 'cargo' => 'Chefe de Esquadra', 'unidade' => 4, 'patente' => 3, 'perfil' => 3],
-            ['nome' => 'Intendente Pedro Correia', 'cargo' => 'Chefe de Esquadra', 'unidade' => 5, 'patente' => 3, 'perfil' => 3],
-            ['nome' => 'Inspector João Baptista', 'cargo' => 'Investigador', 'unidade' => 2, 'patente' => 5, 'perfil' => 4],
-            ['nome' => 'Inspector Maria Tavares', 'cargo' => 'Investigador', 'unidade' => 3, 'patente' => 5, 'perfil' => 4],
-            ['nome' => 'Subinspector Daniel Gonçalves', 'cargo' => 'Investigador', 'unidade' => 4, 'patente' => 6, 'perfil' => 4],
-            ['nome' => 'Inspector Alberto Mendes', 'cargo' => 'Investigador', 'unidade' => 5, 'patente' => 5, 'perfil' => 4],
+            ['nome' => 'Comissário António Fernandes', 'unidade' => 1, 'patente' => 1, 'perfil' => 2],
+            ['nome' => 'Subcomissário Carlos Domingos', 'unidade' => 2, 'patente' => 2, 'perfil' => 3],
+            ['nome' => 'Subcomissário Manuel Pereira', 'unidade' => 3, 'patente' => 2, 'perfil' => 3],
+            ['nome' => 'Intendente Rosa Santos', 'unidade' => 4, 'patente' => 4, 'perfil' => 3],
+            ['nome' => 'Intendente Pedro Correia', 'unidade' => 5, 'patente' => 4, 'perfil' => 3],
+            ['nome' => 'Inspector João Baptista', 'unidade' => 2, 'patente' => 6, 'perfil' => 4],
+            ['nome' => 'Inspector Maria Tavares', 'unidade' => 3, 'patente' => 6, 'perfil' => 4],
+            ['nome' => 'Subinspector Daniel Gonçalves', 'unidade' => 4, 'patente' => 7, 'perfil' => 4],
+            ['nome' => 'Inspector Alberto Mendes', 'unidade' => 5, 'patente' => 6, 'perfil' => 4],
         ];
 
         $agentes = [];
@@ -72,7 +72,7 @@ class TestDataSeeder extends Seeder
                 'data_nascimento' => fake()->dateTimeBetween('-50 years', '-25 years'),
                 'sexo' => str_contains($c['nome'], 'Maria') || str_contains($c['nome'], 'Rosa') ? 'F' : 'M',
                 'telefone' => '9' . fake()->numerify('########'),
-                'patente_id' => $c['patente'], 'cargo' => $c['cargo'],
+                'patente_id' => $c['patente'],
                 'unidade_id' => $c['unidade'],
                 'data_admissao' => fake()->dateTimeBetween('-15 years', '-1 year'),
                 'estado' => 'activo',
@@ -89,12 +89,12 @@ class TestDataSeeder extends Seeder
             $sexo = fake()->randomElement(['M', 'M', 'M', 'F']);
             $nome = ($sexo === 'M' ? fake()->randomElement($nomesM) : fake()->randomElement($nomesF))
                   . ' ' . fake()->randomElement($apelidos) . ' ' . fake()->randomElement($apelidos);
-            $cargo = fake()->randomElement(['Agente Operacional', 'Agente Operacional', 'Agente Operacional', 'Operador de Atendimento']);
+            $perfilId = fake()->randomElement([5, 5, 5, 6]);
 
             $user = User::create([
                 'email' => 'agente' . $nipBase . '@policia-viana.ao',
                 'password' => Hash::make(config('auth.default_agent_password')),
-                'perfil_id' => $cargo === 'Operador de Atendimento' ? 6 : 5,
+                'perfil_id' => $perfilId,
                 'estado' => 'activo',
             ]);
             $agentes[] = Agente::create([
@@ -103,7 +103,7 @@ class TestDataSeeder extends Seeder
                 'bi' => fake()->numerify('##########LA###'),
                 'data_nascimento' => fake()->dateTimeBetween('-40 years', '-22 years'),
                 'sexo' => $sexo, 'telefone' => '9' . fake()->numerify('########'),
-                'patente_id' => fake()->numberBetween(7, 10), 'cargo' => $cargo,
+                'patente_id' => fake()->numberBetween(8, 11),
                 'unidade_id' => fake()->numberBetween(2, 6),
                 'data_admissao' => fake()->dateTimeBetween('-10 years', '-6 months'),
                 'estado' => fake()->randomElement(['activo', 'activo', 'activo', 'activo', 'inactivo']),
@@ -112,8 +112,8 @@ class TestDataSeeder extends Seeder
 
         $agentesActivos = collect($agentes)->filter(fn($a) => $a->estado === 'activo');
         $agentesIds = $agentesActivos->pluck('id')->toArray();
-        $investigadoresIds = collect($agentes)->filter(fn($a) => $a->cargo === 'Investigador')->pluck('id')->toArray();
-        $chefesIds = collect($agentes)->filter(fn($a) => in_array($a->cargo, ['Chefe de Esquadra', 'Comandante Municipal']))->pluck('id')->toArray();
+        $investigadoresIds = collect($agentes)->filter(fn($a) => in_array($a->user?->perfil_id, [4], true))->pluck('id')->toArray();
+        $chefesIds = collect($agentes)->filter(fn($a) => in_array($a->user?->perfil_id, [2, 3], true))->pluck('id')->toArray();
 
         // ══════════════════════════════
         // 2. PESSOAS (80)

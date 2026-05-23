@@ -45,8 +45,6 @@
             <td style="width:45%;text-align:center;padding-top:40px;border-top:1px solid #333;font-size:10px;">Chefe de Esquadra<br><span style="font-size:9px;color:#666;">Assinatura e carimbo</span></td>
         </tr></table>
     </div>
-
-    <div class="pdf-footer">{{ $entidade }} - Auto de Detencao | {{ $data_geracao }}</div>
 </div>
 </body>
 </html>

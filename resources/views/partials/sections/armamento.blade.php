@@ -7,7 +7,7 @@
         <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-arm-busca" placeholder="Buscar por nº série, marca, modelo ou calibre..."></div>
         <button class="btn-primary btn-sm" onclick="loadArmamento()"><i class='bx bx-search'></i> Buscar</button>
         <select id="f-arm-tipo" onchange="loadArmamento()"><option value="">Tipo</option></select>
-        <select id="f-arm-estado" onchange="loadArmamento()"><option value="">Estado</option><option value="disponivel">Disponível</option><option value="atribuido">Atribuído</option><option value="manutencao">Manutenção</option><option value="abatido">Abatido</option></select>
+        <select id="f-arm-estado" onchange="loadArmamento()"><option value="">Estado</option><option value="operacional">Operacional</option><option value="manutencao">Manutenção</option><option value="perdida">Perdida</option><option value="apreendida">Apreendida</option><option value="abatida">Abatida</option></select>
         @if(in_array(auth()->user()->perfil->nome, ['admin', 'comandante']))
         <select id="f-arm-unidade" onchange="loadArmamento()"><option value="">Unidade</option></select>
         @endif

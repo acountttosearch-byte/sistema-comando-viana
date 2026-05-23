@@ -1,15 +1,16 @@
 @extends('layouts.app')
-@section('title', 'Login — SCGD Viana')
+@section('title', 'Login - SCGD Viana')
 
 @push('styles')
 <style>
-    body.login-body {
+    .login-page {
         background: #11306ed3;
         display: flex;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
         overflow: auto;
+        padding: 24px;
     }
 
     .login-card {
@@ -18,7 +19,7 @@
         border-radius: 16px;
         padding: 48px 40px;
         width: 580px;
-        max-width: 720px;
+        max-width: 100%;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
@@ -31,7 +32,6 @@
     form#login-form .form-group {
         width: 90%;
     }
-    
 
     .login-logo {
         width: 64px;
@@ -82,6 +82,7 @@
 
     .login-btn {
         width: 60%;
+        min-width: 180px;
         padding: 11px;
         background: #111827;
         color: #fff;
@@ -114,22 +115,11 @@
         margin-bottom: 12px;
     }
 
-    .login-footer {
-        text-align: center;
-        margin-top: 24px;
-        font-size: 12px;
-        color: #9ca3af;
-    }
-
     .login-link {
         text-align: right;
         margin-bottom: 20px;
-    }
-
-    .login-link a {
-        font-size: 13px;
-        color: #771eeb;
-        text-decoration: none;
+        font-size: 12px;
+        color: #6b7280;
     }
 
     .spinner-btn {
@@ -155,8 +145,7 @@
 @endpush
 
 @section('content')
-
-<body class="login-body">
+<div class="login-page">
     <div class="login-card">
         <img src="{{ asset('img/bnd.png') }}" alt="Logo" class="login-logo">
         <h1 class="login-title">Bem-vindo</h1>
@@ -164,36 +153,36 @@
 
         <form method="POST" action="{{ route('login.submit') }}" id="login-form">
             @csrf
-          <div class="form-group">
-            <label class="login-label">Email Institucional</label>
-            <input class="login-input" name="email" type="email" placeholder="nome@policia-viana.ao" required>
-</div>
-           <div class="form-group">
-            <label class="login-label">Palavra-Passe</label>
-            <input class="login-input" name="password" type="password" placeholder="••••••••" required>
-</div>
+            <div class="form-group">
+                <label class="login-label">Email Institucional</label>
+                <input class="login-input" name="email" type="email" value="{{ old('email') }}" placeholder="nome@policia-viana.ao" autocomplete="username" maxlength="150" required>
+            </div>
+
+            <div class="form-group">
+                <label class="login-label">Palavra-Passe</label>
+                <input class="login-input" name="password" type="password" placeholder="Introduza a palavra-passe" autocomplete="current-password" maxlength="255" required>
+            </div>
+
             @if ($errors->any())
-            <div class="login-error">{{ $errors->first() }}</div>
+                <div class="login-error">{{ $errors->first() }}</div>
             @endif
+
             <div class="form-group" style="width:100%;display:flex;justify-content:flex-end;">
-            <div class="login-link"><a href="#">Esqueceu a palavra-passe?</a></div>
-</div>
+                <div class="login-link">Recuperacao de acesso via administrador</div>
+            </div>
+
             <button class="login-btn" type="submit" id="login-btn">
                 <span class="spinner-btn" id="login-spinner"></span>
                 <span>Entrar</span>
             </button>
         </form>
-
-        <div class="login-footer">
-            Polícia Nacional de Angola
-        </div>
     </div>
+</div>
 
-    <script>
-        document.getElementById('login-form').addEventListener('submit', function () {
-            document.getElementById('login-btn').disabled = true;
-            document.getElementById('login-spinner').classList.add('active');
-        });
-    </script>
-</body>
+<script>
+    document.getElementById('login-form').addEventListener('submit', function () {
+        document.getElementById('login-btn').disabled = true;
+        document.getElementById('login-spinner').classList.add('active');
+    });
+</script>
 @endsection

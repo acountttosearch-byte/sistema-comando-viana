@@ -23,8 +23,8 @@ class DadosAuxiliaresController extends Controller
     public function todos()
     {
         return response()->json([
-            'patentes' => Patente::orderBy('nivel_hierarquico', 'desc')->get(),
-            'perfis' => Perfil::all(),
+            'patentes' => Patente::where('nome', '!=', 'Chefe')->orderBy('nivel_hierarquico', 'desc')->get(),
+            'perfis' => Perfil::where('nome', '!=', 'admin')->get(),
             'categorias_crime' => CategoriaCrime::with('tiposCrime')->get(),
             'tipos_crime' => TipoCrime::with('categoria')->orderBy('nome')->get(),
             'estados_ocorrencia' => EstadoOcorrencia::orderBy('ordem')->get(),

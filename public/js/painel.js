@@ -37,39 +37,101 @@ async function api(url, opt = {}) {
             (e.errors ? Object.values(e.errors).flat() : [e.message || 'Dados invalidos.']).forEach(m => toast(m, 'err'));
             return null;
         }
-        const d = await r.json();
+        const d = sanitizeApi(await r.json());
         if (!r.ok) { toast(d.message || 'Erro no servidor.', 'err'); return null; }
         return d;
-    } catch (e) { toast('Erro de conexao com o servidor.', 'err'); console.error(e); return null; }
+    } catch (e) { toast('Erro de conexao com o servidor.', 'err'); return null; }
 }
 
 async function apiForm(url, fd) {
     try {
         const r = await fetch('/api' + url, { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': APP.csrf, 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
         if (r.status === 422) { const e = await r.json(); (e.errors ? Object.values(e.errors).flat() : ['Dados invalidos.']).forEach(m => toast(m, 'err')); return null; }
-        const d = await r.json(); if (!r.ok) { toast(d.message || 'Erro.', 'err'); return null; } return d;
+        const d = sanitizeApi(await r.json()); if (!r.ok) { toast(d.message || 'Erro.', 'err'); return null; } return d;
     } catch (e) { toast('Erro de conexao.', 'err'); return null; }
+}
+
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+}
+
+function sanitizeApi(value) {
+    if (typeof value === 'string') return esc(value);
+    if (Array.isArray(value)) return value.map(sanitizeApi);
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeApi(v)]));
+    }
+    return value;
 }
 
 // ══════════════════
 // VALIDACAO
 // ══════════════════
+const BI_PROVINCIAS_ANGOLA = {
+    BO: 'Bengo',
+    BE: 'Benguela',
+    BI: 'Bie',
+    CA: 'Cabinda',
+    CD: 'Cuando',
+    CB: 'Cubango',
+    CN: 'Cuanza Norte',
+    CS: 'Cuanza Sul',
+    CE: 'Cunene',
+    HB: 'Huambo',
+    HL: 'Huila',
+    IB: 'Icolo e Bengo',
+    LA: 'Luanda',
+    LN: 'Lunda Norte',
+    LS: 'Lunda Sul',
+    MA: 'Malanje',
+    MO: 'Moxico',
+    ML: 'Moxico Leste',
+    NA: 'Namibe',
+    UI: 'Uige',
+    ZA: 'Zaire'
+};
+
+function normalizarBI(val) {
+    return (val || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15);
+}
+
+function normalizarNIP(val) {
+    const raw = (val || '').toUpperCase().replace(/[^0-9A-Z-]/g, '');
+    const digits = raw.replace(/^NIP-?/i, '').replace(/\D/g, '').slice(0, 5);
+    return digits ? 'NIP-' + digits : raw.slice(0, 9);
+}
+
+function normalizarTelefoneAO(val) {
+    const digits = (val || '').replace(/\D/g, '');
+    if (digits.startsWith('244')) return '+' + digits.slice(0, 12);
+    if (digits.startsWith('9')) return '+244' + digits.slice(0, 9);
+    return digits.slice(0, 12);
+}
+
 function validarNome(val) {
-    if (!val || val.trim().length < 3) return 'Nome deve ter no minimo 3 caracteres.';
-    if (/[0-9]/.test(val)) return 'Nome nao pode conter numeros.';
-    if (/[^a-zA-ZÀ-ÿ\s\-']/.test(val)) return 'Nome contem caracteres invalidos.';
+    const nome = (val || '').trim().replace(/\s+/g, ' ');
+    if (!nome || nome.length < 3) return 'Nome deve ter no minimo 3 caracteres.';
+    if (nome.length > 200) return 'Nome demasiado longo.';
+    if (/[0-9]/.test(nome)) return 'Nome nao pode conter numeros.';
+    if (/[^\p{L}\s'-]/u.test(nome)) return 'Nome contem caracteres invalidos.';
+    if (nome.split(' ').length < 2) return 'Informe nome e apelido.';
     return null;
 }
 
 function validarBI(val) {
-    if (!val) return null; // BI pode ser opcional
-    val = val.trim();
-    if (val.length < 10) return 'BI deve ter no minimo 10 caracteres.';
-    if (!/^[0-9]+[A-Za-z]{2}[0-9]{3}$/.test(val) && !/^[0-9]{10,14}[A-Za-z]{0,2}[0-9]{0,3}$/.test(val))
-        return 'Formato de BI invalido.';
+    if (!val) return null;
+    val = normalizarBI(val);
+    if (!/^\d{10}[A-Z]{2}\d{3}$/.test(val)) return 'BI invalido. Use o formato 0012345678LA042.';
+    const codigo = val.slice(10, 12);
+    if (!BI_PROVINCIAS_ANGOLA[codigo]) return 'Codigo provincial do BI invalido: ' + codigo + '.';
     return null;
 }
 
+function validarNIP(val) {
+    if (!val) return null;
+    if (!/^NIP-\d{5}$/.test(normalizarNIP(val))) return 'NIP invalido. Use o formato NIP-00000.';
+    return null;
+}
 function validarDataNaoFutura(val) {
     if (!val) return null;
     const d = new Date(val);
@@ -81,14 +143,34 @@ function validarDataNaoFutura(val) {
 
 function validarTelefone(val) {
     if (!val) return null;
-    val = val.trim();
-    if (!/^[0-9+\-\s()]{7,20}$/.test(val)) return 'Telefone invalido.';
+    val = normalizarTelefoneAO(val);
+    if (!/^\+2449\d{8}$/.test(val)) return 'Telefone angolano invalido. Ex: +244 923 000 000.';
     return null;
 }
 
 function validarEmail(val) {
     if (!val) return null;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Email invalido.';
+    return null;
+}
+
+function validarEmailInstitucional(val) {
+    const emailErro = validarEmail(val);
+    if (emailErro) return emailErro;
+    if (!val) return null;
+    val = val.trim().toLowerCase();
+    if (!/^[a-z0-9._%+-]+@policia-viana\.ao$/.test(val)) return 'Use o email institucional @policia-viana.ao.';
+    return null;
+}
+
+function validarHoraOcorrencia() {
+    const data = v('noc-data');
+    const hora = v('noc-hora');
+    if (!hora) return null;
+    if (!/^\d{2}:\d{2}$/.test(hora)) return 'Hora invalida.';
+    if (!data) return 'Informe a data antes da hora.';
+    const momento = new Date(`${data}T${hora}:00`);
+    if (momento > new Date()) return 'A hora da ocorrencia nao pode estar no futuro.';
     return null;
 }
 
@@ -132,6 +214,13 @@ function validarObrigatorio(id, label) {
     el.classList.remove('error');
     const errEl = el.parentNode.querySelector('.form-error');
     if (errEl) errEl.remove();
+    return null;
+}
+
+function validarOpcaoExistente(id, label) {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return null;
+    if (![...el.options].some(o => o.value === el.value)) return label + ' invalido.';
     return null;
 }
 
@@ -191,6 +280,8 @@ async function loadAux() {
     const d = await api('/dados-auxiliares');
     if (!d) return;
     aux = d;
+    aux.patentes = (aux.patentes || []).filter(p => p.nome !== 'Chefe');
+    aux.perfis = (aux.perfis || []).filter(p => p.nome !== 'admin');
     fillSel('f-oc-estado', aux.estados_ocorrencia, 'id', 'nome', 'Todos os estados');
     fillSel('f-oc-tipo', aux.tipos_crime, 'id', 'nome', 'Todos os tipos');
     fillSel('f-det-estado', aux.estados_detencao, 'id', 'nome', 'Todos');
@@ -207,9 +298,35 @@ async function loadAux() {
     fillSel('ag-perfil', aux.perfis, 'id', 'descricao', 'Selecionar');
     fillSel('rel-tipo', aux.tipos_relatorio, 'id', 'nome', 'Selecionar');
     fillSel('rel-unidade', aux.unidades, 'id', 'nome', 'Todas');
+    initNormalizacaoAgente();
 }
 
 function fillSel(id, items, vk, tk, ph) { const el = document.getElementById(id); if (!el || !items) return; el.innerHTML = `<option value="">${ph}</option>` + items.map(i => `<option value="${i[vk]}">${i[tk]}</option>`).join(''); }
+
+function initNormalizacaoAgente() {
+    const bind = (id, normalizador) => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.normBound) return;
+        el.dataset.normBound = '1';
+        el.addEventListener('input', () => {
+            const ini = el.selectionStart;
+            const antes = el.value;
+            el.value = normalizador(el.value);
+            if (document.activeElement === el && ini !== null) {
+                const diff = el.value.length - antes.length;
+                const pos = Math.max(0, ini + diff);
+                el.setSelectionRange(pos, pos);
+            }
+        });
+        el.addEventListener('blur', () => { el.value = normalizador(el.value).trim(); });
+    };
+
+    bind('ag-bi', normalizarBI);
+    bind('ag-nip', normalizarNIP);
+    bind('ag-tel', normalizarTelefoneAO);
+    bind('ag-email', v => (v || '').trim().toLowerCase().replace(/\s/g, '').slice(0, 150));
+    bind('ag-nome', v => (v || '').replace(/\s+/g, ' ').replace(/[^\p{L}\s\-']/gu, '').slice(0, 200));
+}
 
 function mkSel(id, items, vk, tk, ph = 'Selecionar', req = true) {
     if (!items) return `<select id="${id}"><option value="">-</option></select>`;
@@ -269,28 +386,28 @@ async function loadOcorrencias(page = 1) {
 function formNovaOcorrencia() {
     tempEvidencias = [];
     renderMain('ocorrencias', `
-        <div class="page-header"><div><h1 class="page-title">Registar Nova Ocorrencia</h1><p class="page-desc">Preencha todos os campos obrigatorios (*)</p></div>
+        <div class="page-header"><div><h1 class="page-title">Registar Nova Ocorrencia</h1><p class="page-desc">Preencha todos os campos obrigatorios</p></div>
             <button class="btn-ghost" onclick="voltarPara('ocorrencias')"><i class='bx bx-arrow-back'></i> Voltar</button>
         </div>
         <div class="form-card">
             <div class="form-section">Dados da Ocorrencia</div>
             <div class="form-row">
-                <div class="form-col"><label>Tipo de Crime *</label>${mkSel('noc-tipo', aux.tipos_crime, 'id', 'nome')}</div>
-                <div class="form-col"><label>Prioridade *</label>${mkOpts('noc-prio', [{ v: 'baixa', t: 'Baixa' }, { v: 'media', t: 'Media' }, { v: 'alta', t: 'Alta' }, { v: 'critica', t: 'Critica' }])}</div>
+                <div class="form-col"><label>Tipo de Crime</label>${mkSel('noc-tipo', aux.tipos_crime, 'id', 'nome')}</div>
+                <div class="form-col"><label>Prioridade</label>${mkOpts('noc-prio', [{ v: 'baixa', t: 'Baixa' }, { v: 'media', t: 'Media' }, { v: 'alta', t: 'Alta' }, { v: 'critica', t: 'Critica' }])}</div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Data da Ocorrencia *</label><input type="date" id="noc-data" value="${today()}" max="${today()}"><span class="form-hint">Data válida</span></div>
+                <div class="form-col"><label>Data da Ocorrencia</label><input type="date" id="noc-data" value="${today()}" max="${today()}"><span class="form-hint">Data válida</span></div>
                 <div class="form-col"><label>Hora</label><input type="time" id="noc-hora"></div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Local *</label><input type="text" id="noc-local" placeholder="Descreva o local da ocorrencia"></div>
+                <div class="form-col"><label>Local</label><input type="text" id="noc-local" placeholder="Descreva o local da ocorrencia"></div>
                 <div class="form-col"><label>Bairro</label>${mkSel('noc-bairro', aux.bairros, 'id', 'nome', 'Selecionar bairro', false)}</div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Unidade Policial *</label>${mkSel('noc-unidade', aux.unidades, 'id', 'nome')}</div>
+                <div class="form-col"><label>Unidade Policial</label>${mkSel('noc-unidade', aux.unidades, 'id', 'nome')}</div>
                 <div class="form-col"><label>Agente Responsavel</label><select id="noc-agente"><option value="">Definir depois</option></select><span class="form-hint">Selecione a unidade primeiro</span></div>
             </div>
-            <div class="form-col" style="margin-bottom:14px;"><label>Descricao Detalhada *</label><textarea id="noc-desc" rows="5" placeholder="Descreva os factos com o maximo de detalhes possiveis..."></textarea></div>
+            <div class="form-col" style="margin-bottom:14px;"><label>Descricao Detalhada</label><textarea id="noc-desc" rows="5" placeholder="Descreva os factos com o maximo de detalhes possiveis..."></textarea></div>
 
             <div class="form-section">Evidencias (opcional)</div>
             <p class="form-hint" style="margin-bottom:12px;">Adicione fotografias, documentos ou outros ficheiros relevantes</p>
@@ -352,6 +469,7 @@ async function submitNovaOcorrencia() {
     erros.push(validarObrigatorio('noc-prio', 'Prioridade'));
     erros.push(validarObrigatorio('noc-data', 'Data'));
     erros.push(validarCampo('noc-data', validarDataNaoFutura));
+    erros.push(validarCampo('noc-hora', validarHoraOcorrencia));
     erros.push(validarObrigatorio('noc-local', 'Local'));
     erros.push(validarObrigatorio('noc-unidade', 'Unidade'));
     erros.push(validarObrigatorio('noc-desc', 'Descricao'));
@@ -458,8 +576,8 @@ function formAddEnvolvido(ocId) {
         </div>
         <div class="form-card">
             <div class="form-row">
-                <div class="form-col"><label>Pessoa *</label><div style="display:flex;gap:8px;"><select id="env-pes" style="flex:1;" required></select><button class="btn-ghost btn-sm" onclick="formNovaPessoa(${ocId})">+ Nova Pessoa</button></div></div>
-                <div class="form-col"><label>Tipo de Envolvimento *</label>${mkSel('env-tipo', [{ id: 1, nome: 'Suspeito' }, { id: 2, nome: 'Vitima' }, { id: 3, nome: 'Testemunha' }], 'id', 'nome')}</div>
+                <div class="form-col"><label>Pessoa</label><div style="display:flex;gap:8px;"><select id="env-pes" style="flex:1;" required></select><button class="btn-ghost btn-sm" onclick="formNovaPessoa(${ocId})">+ Nova Pessoa</button></div></div>
+                <div class="form-col"><label>Tipo de Envolvimento</label>${mkSel('env-tipo', [{ id: 1, nome: 'Suspeito' }, { id: 2, nome: 'Vitima' }, { id: 3, nome: 'Testemunha' }], 'id', 'nome')}</div>
             </div>
             <div class="form-col" style="margin-bottom:14px;"><label>Observacoes</label><textarea id="env-obs" rows="2"></textarea></div>
             <div class="form-actions">
@@ -517,7 +635,7 @@ function formNovaPessoa(retOcId = null) {
         <div class="form-card">
             <div class="form-section">Identificacao</div>
             <div class="form-row">
-                <div class="form-col"><label>Nome Completo *</label><input type="text" id="npes-nome"><span class="form-hint"></span></div>
+                <div class="form-col"><label>Nome Completo</label><input type="text" id="npes-nome"><span class="form-hint"></span></div>
                 <div class="form-col"><label>Alcunha</label><input type="text" id="npes-alcunha"></div>
             </div>
             <div class="form-row">
@@ -607,14 +725,14 @@ function formNovaDetencao() {
         <div class="form-card">
             <div class="form-section">Dados da Detencao</div>
             <div class="form-row">
-                <div class="form-col"><label>Pessoa (detido) *</label><div style="display:flex;gap:8px;"><select id="ndet-pes" style="flex:1;" required></select><button class="btn-ghost btn-sm" onclick="formNovaPessoa()">+ Nova</button></div></div>
-                <div class="form-col"><label>Ocorrencia Associada *</label><select id="ndet-oc" required></select></div>
+                <div class="form-col"><label>Pessoa (detido)</label><div style="display:flex;gap:8px;"><select id="ndet-pes" style="flex:1;" required></select><button class="btn-ghost btn-sm" onclick="formNovaPessoa()">+ Nova</button></div></div>
+                <div class="form-col"><label>Ocorrencia Associada</label><select id="ndet-oc" required></select></div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Data e Hora *</label><input type="datetime-local" id="ndet-data" value="${nowLocal()}" max="${nowLocal()}"></div>
-                <div class="form-col"><label>Local *</label><input type="text" id="ndet-local" required></div>
+                <div class="form-col"><label>Data e Hora</label><input type="datetime-local" id="ndet-data" value="${nowLocal()}" max="${nowLocal()}"></div>
+                <div class="form-col"><label>Local</label><input type="text" id="ndet-local" required></div>
             </div>
-            <div class="form-col" style="margin-bottom:14px;"><label>Motivo *</label><textarea id="ndet-motivo" rows="3" required></textarea></div>
+            <div class="form-col" style="margin-bottom:14px;"><label>Motivo</label><textarea id="ndet-motivo" rows="3" required></textarea></div>
             <div class="form-col" style="margin-bottom:14px;"><label>Observacoes</label><textarea id="ndet-obs" rows="2"></textarea></div>
             <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('detencoes')">Cancelar</button><button class="btn-danger" onclick="submitNovaDetencao()"><i class='bx bx-lock-alt'></i> Registar Detencao</button></div>
         </div>
@@ -683,7 +801,7 @@ async function patEst(id, est) { const d = await api(`/patrulhas/${id}/estado`, 
 async function loadAlertas(estado, ev) { if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } const d = await api('/alertas?estado=' + estado); if (!d) return; const items = d.data || []; const c = document.getElementById('list-alertas'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem alertas.</div>'; return; } c.innerHTML = items.map(a => `<div class="alert-card ${a.prioridade}"><div class="alert-ico"><i class='bx ${a.tipo_alerta?.icone || 'bx-bell-ring'}'></i></div><div class="alert-info"><h4>${a.titulo}</h4><p>${a.descricao.substring(0, 200)}${a.descricao.length > 200 ? '...' : ''}</p><div class="alert-meta">${bPrio(a.prioridade)} - ${a.tipo_alerta?.nome || ''} - ${fDT(a.created_at)}</div></div><div>${a.estado === 'activo' ? `<button class="btn-success btn-sm" onclick="resolveAlerta(${a.id})">Resolver</button>` : `<span class="badge badge-gray">${a.estado}</span>`}</div></div>`).join(''); }
 async function resolveAlerta(id) { const d = await api(`/alertas/${id}/resolver`, { method: 'PATCH' }); if (d?.success) { toast('Alerta resolvido.', 'ok'); loadAlertas('activo'); loadDashboard(); } }
 
-async function loadViaturas(page = 1) { const p = new URLSearchParams({ page, busca: v('f-viat-busca'), estado: v('f-viat-estado'), unidade_id: v('f-viat-unidade') }); const d = await api('/viaturas?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-viat'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(vi => `<div class="tbl-row" onclick="viewViatura(${vi.id})"><div class="col c1"><strong>${vi.matricula}</strong></div><div class="col c2">${vi.marca} ${vi.modelo}${vi.cor ? ' (' + vi.cor + ')' : ''}</div><div class="col c2">${vi.unidade?.nome || '-'}</div><div class="col c1">${(vi.quilometragem || 0).toLocaleString()} km</div><div class="col c1"><span class="badge badge-${vi.estado === 'disponivel' ? 'green' : vi.estado === 'em_uso' ? 'blue' : 'orange'}">${vi.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewViatura(${vi.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-viat', d, loadViaturas); }
+async function loadViaturas(page = 1) { const p = new URLSearchParams({ page, busca: v('f-viat-busca'), estado: v('f-viat-estado'), unidade_id: v('f-viat-unidade') }); const d = await api('/viaturas?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-viat'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(vi => `<div class="tbl-row" onclick="viewViatura(${vi.id})"><div class="col c1"><strong>${vi.matricula}</strong></div><div class="col c2">${vi.marca} ${vi.modelo}${vi.cor ? ' (' + vi.cor + ')' : ''}</div><div class="col c2">${vi.unidade?.nome || '-'}</div><div class="col c1">${(vi.quilometragem || 0).toLocaleString()} km</div><div class="col c1"><span class="badge badge-${vi.estado === 'operacional' ? 'green' : vi.estado === 'manutencao' ? 'orange' : 'gray'}">${vi.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewViatura(${vi.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-viat', d, loadViaturas); }
 async function viewViatura(id) {
     showLoad(); const vi = await api('/viaturas/' + id); hideLoad(); if (!vi) return;
     let h = `<div class="page-header"><div><h1 class="page-title">${vi.matricula}</h1><p class="page-desc">${vi.marca} ${vi.modelo}</p></div>
@@ -701,7 +819,7 @@ async function viewViatura(id) {
     renderMain('viaturas', h);
 }
 
-async function loadArmamento(page = 1) { const p = new URLSearchParams({ page, busca: v('f-arm-busca'), estado: v('f-arm-estado'), tipo_armamento_id: v('f-arm-tipo'), unidade_id: v('f-arm-unidade') }); const d = await api('/armamento?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-arm'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(a => `<div class="tbl-row" onclick="viewArmamento(${a.id})"><div class="col c1"><strong>${a.numero_serie}</strong></div><div class="col c1">${a.tipo_armamento?.nome || '-'}</div><div class="col c1">${a.marca || '-'}</div><div class="col c1">${a.calibre || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c2">${a.atribuicao_actual?.agente?.nome || '<span class="text-muted">Disponível</span>'}</div><div class="col c1"><span class="badge badge-${a.estado === 'disponivel' ? 'green' : a.estado === 'atribuido' ? 'blue' : 'orange'}">${a.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewArmamento(${a.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-arm', d, loadArmamento); }
+async function loadArmamento(page = 1) { const p = new URLSearchParams({ page, busca: v('f-arm-busca'), estado: v('f-arm-estado'), tipo_armamento_id: v('f-arm-tipo'), unidade_id: v('f-arm-unidade') }); const d = await api('/armamento?' + p); if (!d) return; const items = d.data || []; const c = document.getElementById('list-arm'); if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem dados.</div>'; return; } c.innerHTML = items.map(a => `<div class="tbl-row" onclick="viewArmamento(${a.id})"><div class="col c1"><strong>${a.numero_serie}</strong></div><div class="col c1">${a.tipo_armamento?.nome || '-'}</div><div class="col c1">${a.marca || '-'}</div><div class="col c1">${a.calibre || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c2">${a.atribuicao_actual?.agente?.nome || '<span class="text-muted">Disponivel</span>'}</div><div class="col c1"><span class="badge badge-${a.estado === 'operacional' ? 'green' : a.estado === 'manutencao' ? 'orange' : 'gray'}">${a.estado || '-'}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();viewArmamento(${a.id})"><i class='bx bx-show'></i></button></div></div>`).join(''); renderPag('pag-arm', d, loadArmamento); }
 async function viewArmamento(id) {
     showLoad(); const a = await api('/armamento/' + id); hideLoad(); if (!a) return;
     let h = `<div class="page-header"><div><h1 class="page-title">${a.numero_serie}</h1><p class="page-desc">${a.tipo_armamento?.nome || ''} - ${a.marca || ''} ${a.modelo || ''}</p></div>
@@ -963,9 +1081,9 @@ function exportPdfAgentes() {
 function formNovaViatura() {
     renderMain('viaturas', `<div class="page-header"><div><h1 class="page-title">Registar Nova Viatura</h1></div><button class="btn-ghost" onclick="voltarPara('viaturas')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados da Viatura</div>
-        <div class="form-row"><div class="form-col"><label>Matricula *</label><input type="text" id="nvi-mat" placeholder="LD-00-00-AA" required></div><div class="form-col"><label>Marca *</label><input type="text" id="nvi-marca" required></div></div>
-        <div class="form-row"><div class="form-col"><label>Modelo *</label><input type="text" id="nvi-mod" required></div><div class="form-col"><label>Ano</label><input type="number" id="nvi-ano" min="2000" max="${new Date().getFullYear()}"></div></div>
-        <div class="form-row"><div class="form-col"><label>Cor</label><input type="text" id="nvi-cor"></div><div class="form-col"><label>Unidade *</label>${mkSel('nvi-un', aux.unidades, 'id', 'nome')}</div></div>
+        <div class="form-row"><div class="form-col"><label>Matricula</label><input type="text" id="nvi-mat" placeholder="LD-00-00-AA" required></div><div class="form-col"><label>Marca</label><input type="text" id="nvi-marca" required></div></div>
+        <div class="form-row"><div class="form-col"><label>Modelo</label><input type="text" id="nvi-mod" required></div><div class="form-col"><label>Ano</label><input type="number" id="nvi-ano" min="2000" max="${new Date().getFullYear()}"></div></div>
+        <div class="form-row"><div class="form-col"><label>Cor</label><input type="text" id="nvi-cor"></div><div class="form-col"><label>Unidade</label>${mkSel('nvi-un', aux.unidades, 'id', 'nome')}</div></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('viaturas')">Cancelar</button><button class="btn-primary" onclick="submitViatura()"><i class='bx bx-save'></i> Registar</button></div>
     </div>`);
 }
@@ -974,9 +1092,9 @@ async function submitViatura() { limparErros(); let e = [validarObrigatorio('nvi
 function formNovoArmamento() {
     renderMain('armamento', `<div class="page-header"><div><h1 class="page-title">Registar Novo Armamento</h1></div><button class="btn-ghost" onclick="voltarPara('armamento')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados do Armamento</div>
-        <div class="form-row"><div class="form-col"><label>Tipo *</label>${mkSel('narm-tipo', aux.tipos_armamento, 'id', 'nome')}</div><div class="form-col"><label>Numero de Serie *</label><input type="text" id="narm-serie" required></div></div>
+        <div class="form-row"><div class="form-col"><label>Tipo</label>${mkSel('narm-tipo', aux.tipos_armamento, 'id', 'nome')}</div><div class="form-col"><label>Numero de Serie</label><input type="text" id="narm-serie" required></div></div>
         <div class="form-row"><div class="form-col"><label>Marca</label><input type="text" id="narm-marca"></div><div class="form-col"><label>Modelo</label><input type="text" id="narm-mod"></div></div>
-        <div class="form-row"><div class="form-col"><label>Calibre</label><input type="text" id="narm-cal" placeholder="9mm"></div><div class="form-col"><label>Unidade *</label>${mkSel('narm-un', aux.unidades, 'id', 'nome')}</div></div>
+        <div class="form-row"><div class="form-col"><label>Calibre</label><input type="text" id="narm-cal" placeholder="9mm"></div><div class="form-col"><label>Unidade</label>${mkSel('narm-un', aux.unidades, 'id', 'nome')}</div></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('armamento')">Cancelar</button><button class="btn-primary" onclick="submitArmamento()"><i class='bx bx-save'></i> Registar</button></div>
     </div>`);
 }
@@ -985,9 +1103,9 @@ async function submitArmamento() { limparErros(); let e = [validarObrigatorio('n
 function formNovoAlerta() {
     renderMain('alertas', `<div class="page-header"><div><h1 class="page-title">Emitir Alerta</h1><p class="page-desc">O alerta sera enviado para todas as esquadras do municipio</p></div><button class="btn-ghost" onclick="voltarPara('alertas')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados do Alerta</div>
-        <div class="form-row"><div class="form-col"><label>Tipo de Alerta *</label>${mkSel('nal-tipo', aux.tipos_alerta, 'id', 'nome')}</div><div class="form-col"><label>Prioridade *</label>${mkOpts('nal-prio', [{ v: 'urgente', t: 'Urgente' }, { v: 'alta', t: 'Alta' }, { v: 'normal', t: 'Normal' }])}</div></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Titulo *</label><input type="text" id="nal-tit" required placeholder="Ex: Procura-se suspeito de homicidio"></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Descricao Detalhada *</label><textarea id="nal-desc" rows="5" required placeholder="Descreva todos os detalhes relevantes..."></textarea></div>
+        <div class="form-row"><div class="form-col"><label>Tipo de Alerta</label>${mkSel('nal-tipo', aux.tipos_alerta, 'id', 'nome')}</div><div class="form-col"><label>Prioridade</label>${mkOpts('nal-prio', [{ v: 'urgente', t: 'Urgente' }, { v: 'alta', t: 'Alta' }, { v: 'normal', t: 'Normal' }])}</div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Titulo</label><input type="text" id="nal-tit" required placeholder="Ex: Procura-se suspeito de homicidio"></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Descricao Detalhada</label><textarea id="nal-desc" rows="5" required placeholder="Descreva todos os detalhes relevantes..."></textarea></div>
         <div style="background:var(--danger-bg);padding:12px;border-radius:var(--r-sm);margin-bottom:16px;font-size:12px;color:var(--danger);display:flex;align-items:center;gap:8px;"><i class='bx bx-info-circle' style="font-size:16px;"></i> Este alerta sera enviado automaticamente para todas as unidades policiais activas.</div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('alertas')">Cancelar</button><button class="btn-danger" onclick="submitAlerta()"><i class='bx bx-bell'></i> Emitir Alerta</button></div>
     </div>`);
@@ -997,7 +1115,7 @@ async function submitAlerta() { limparErros(); let e = [validarObrigatorio('nal-
 function formNovaInvestigacao() {
     renderMain('investigacoes', `<div class="page-header"><div><h1 class="page-title">Abrir Investigacao</h1></div><button class="btn-ghost" onclick="voltarPara('investigacoes')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados da Investigacao</div>
-        <div class="form-row"><div class="form-col"><label>Ocorrencia *</label><select id="ninv-oc" required></select></div><div class="form-col"><label>Investigador *</label><select id="ninv-ag" required></select></div></div>
+        <div class="form-row"><div class="form-col"><label>Ocorrencia</label><select id="ninv-oc" required></select></div><div class="form-col"><label>Investigador</label><select id="ninv-ag" required></select></div></div>
         <div class="form-row"><div class="form-col"><label>Prazo</label><input type="date" id="ninv-prazo" min="${today()}"></div></div>
         <div class="form-col" style="margin-bottom:14px;"><label>Resumo</label><textarea id="ninv-res" rows="3"></textarea></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('investigacoes')">Cancelar</button><button class="btn-primary" onclick="submitInvestigacao()"><i class='bx bx-search-alt-2'></i> Abrir Investigacao</button></div>
@@ -1009,8 +1127,8 @@ async function submitInvestigacao() { limparErros(); let e = [validarObrigatorio
 function formNovoDespacho() {
     renderMain('despachos', `<div class="page-header"><div><h1 class="page-title">Novo Despacho</h1></div><button class="btn-ghost" onclick="voltarPara('despachos')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados do Despacho</div>
-        <div class="form-row"><div class="form-col"><label>Ocorrencia *</label><select id="ndesp-oc" required></select></div><div class="form-col"><label>Prioridade *</label>${mkOpts('ndesp-prio', [{ v: 'baixa', t: 'Baixa' }, { v: 'media', t: 'Media' }, { v: 'alta', t: 'Alta' }, { v: 'critica', t: 'Critica' }])}</div></div>
-        <div class="form-row"><div class="form-col"><label>Agente *</label><select id="ndesp-ag" required></select></div><div class="form-col"><label>Unidade *</label>${mkSel('ndesp-un', aux.unidades, 'id', 'nome')}</div></div>
+        <div class="form-row"><div class="form-col"><label>Ocorrencia</label><select id="ndesp-oc" required></select></div><div class="form-col"><label>Prioridade</label>${mkOpts('ndesp-prio', [{ v: 'baixa', t: 'Baixa' }, { v: 'media', t: 'Media' }, { v: 'alta', t: 'Alta' }, { v: 'critica', t: 'Critica' }])}</div></div>
+        <div class="form-row"><div class="form-col"><label>Agente</label><select id="ndesp-ag" required></select></div><div class="form-col"><label>Unidade</label>${mkSel('ndesp-un', aux.unidades, 'id', 'nome')}</div></div>
         <div class="form-col" style="margin-bottom:14px;"><label>Instrucoes</label><textarea id="ndesp-inst" rows="3"></textarea></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('despachos')">Cancelar</button><button class="btn-primary" onclick="submitDespacho()"><i class='bx bx-send'></i> Despachar</button></div>
     </div>`);
@@ -1022,9 +1140,9 @@ async function submitDespacho() { limparErros(); let e = [validarObrigatorio('nd
 function formNovaMensagem() {
     renderMain('mensagens', `<div class="page-header"><div><h1 class="page-title">Nova Mensagem</h1></div><button class="btn-ghost" onclick="voltarPara('mensagens')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados da Mensagem</div>
-        <div class="form-row"><div class="form-col"><label>Destinatario *</label><select id="nmsg-dest" required></select></div><div class="form-col"><label>Prioridade</label>${mkOpts('nmsg-prio', [{ v: 'normal', t: 'Normal' }, { v: 'urgente', t: 'Urgente' }], false)}</div></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Assunto *</label><input type="text" id="nmsg-tit" required></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Mensagem *</label><textarea id="nmsg-corpo" rows="5" required></textarea></div>
+        <div class="form-row"><div class="form-col"><label>Destinatario</label><select id="nmsg-dest" required></select></div><div class="form-col"><label>Prioridade</label>${mkOpts('nmsg-prio', [{ v: 'normal', t: 'Normal' }, { v: 'urgente', t: 'Urgente' }], false)}</div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Assunto</label><input type="text" id="nmsg-tit" required></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Mensagem</label><textarea id="nmsg-corpo" rows="5" required></textarea></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('mensagens')">Cancelar</button><button class="btn-primary" onclick="submitMensagem()"><i class='bx bx-send'></i> Enviar</button></div>
     </div>`);
     loadSelAgentes('nmsg-dest');
@@ -1034,14 +1152,14 @@ async function submitMensagem() { limparErros(); let e = [validarObrigatorio('nm
 function formNovaPatrulha() {
     renderMain('patrulhas', `<div class="page-header"><div><h1 class="page-title">Planear Patrulha</h1></div><button class="btn-ghost" onclick="voltarPara('patrulhas')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados da Patrulha</div>
-        <div class="form-row"><div class="form-col"><label>Data *</label><input type="date" id="npat-data" value="${today()}" required></div><div class="form-col"><label>Turno *</label>${mkSel('npat-turno', aux.turnos, 'id', 'nome')}</div></div>
-        <div class="form-row"><div class="form-col"><label>Unidade *</label>${mkSel('npat-un', aux.unidades, 'id', 'nome')}</div><div class="form-col"><label>Zona *</label><select id="npat-zona" required></select></div></div>
-        <div class="form-row"><div class="form-col"><label>Lider *</label><select id="npat-lider" required></select></div><div class="form-col"><label>Viatura</label><select id="npat-viat"><option value="">Sem viatura</option></select></div></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Agentes *</label><select id="npat-ags" multiple style="height:100px;" required></select><span class="form-hint">Ctrl+click para selecionar multiplos</span></div>
+        <div class="form-row"><div class="form-col"><label>Data</label><input type="date" id="npat-data" value="${today()}" required></div><div class="form-col"><label>Turno</label>${mkSel('npat-turno', aux.turnos, 'id', 'nome')}</div></div>
+        <div class="form-row"><div class="form-col"><label>Unidade</label>${mkSel('npat-un', aux.unidades, 'id', 'nome')}</div><div class="form-col"><label>Zona</label><select id="npat-zona" required></select></div></div>
+        <div class="form-row"><div class="form-col"><label>Lider</label><select id="npat-lider" required></select></div><div class="form-col"><label>Viatura</label><select id="npat-viat"><option value="">Sem viatura</option></select></div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Agentes</label><select id="npat-ags" multiple style="height:100px;" required></select><span class="form-hint">Ctrl+click para selecionar multiplos</span></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('patrulhas')">Cancelar</button><button class="btn-primary" onclick="submitPatrulha()"><i class='bx bx-save'></i> Criar Patrulha</button></div>
     </div>`);
     loadSelAgentes('npat-lider'); loadSelAgentes('npat-ags');
-    document.getElementById('npat-un')?.addEventListener('change', async function () { if (!this.value) return; loadSelAgentes('npat-lider', '&unidade_id=' + this.value); loadSelAgentes('npat-ags', '&unidade_id=' + this.value); const vt = await api('/viaturas?unidade_id=' + this.value + '&estado=operacional'); if (vt) fillSel('npat-viat', vt, 'id', 'matricula', 'Sem viatura'); });
+    document.getElementById('npat-un')?.addEventListener('change', async function () { if (!this.value) return; loadSelAgentes('npat-lider', '&unidade_id=' + this.value); loadSelAgentes('npat-ags', '&unidade_id=' + this.value); const vt = await api('/viaturas?unidade_id=' + this.value + '&estado=operacional'); if (vt) fillSel('npat-viat', vt.data || [], 'id', 'matricula', 'Sem viatura'); });
 }
 async function submitPatrulha() { const ags = Array.from(document.getElementById('npat-ags')?.selectedOptions || []).map(o => parseInt(o.value)); if (!ags.length) { toast('Selecione pelo menos um agente.', 'err'); return; } limparErros(); let e = [validarObrigatorio('npat-data', 'Data'), validarObrigatorio('npat-turno', 'Turno'), validarObrigatorio('npat-un', 'Unidade'), validarObrigatorio('npat-zona', 'Zona'), validarObrigatorio('npat-lider', 'Lider')].filter(x => x); if (e.length) { toast('Corrija os erros.', 'err'); return; } showLoad(); const d = await api('/patrulhas', { method: 'POST', body: JSON.stringify({ data: v('npat-data'), turno_id: v('npat-turno'), zona_id: v('npat-zona'), unidade_id: v('npat-un'), agente_lider_id: v('npat-lider'), viatura_id: v('npat-viat') || null, agentes: ags }) }); hideLoad(); if (d?.success) { toast('Patrulha criada.', 'ok'); voltarPara('patrulhas'); } }
 
@@ -1049,28 +1167,45 @@ async function submitPatrulha() { const ags = Array.from(document.getElementById
 // IDENTIDADE (Agentes / Unidades)
 // ══════════════════
 async function loadIdentidade() { loadAgentes('activo', 'list-ag-act'); loadAgentes('inactivo', 'list-ag-ina'); loadUnidades(); }
-async function loadAgentes(estado, cid) { const d = await api('/agentes?estado=' + estado); if (!d) return; const c = document.getElementById(cid); if (!c) return; if (!d.length) { c.innerHTML = '<div class="tbl-empty">Sem agentes.</div>'; return; } c.innerHTML = d.map(a => `<div class="tbl-row"><div class="col c2"><strong>${a.nome}</strong></div><div class="col c1">${a.nip}</div><div class="col c2">${a.cargo || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c1">${a.patente?.nome || '-'}</div><div class="col c1"><span class="badge badge-${a.estado === 'activo' ? 'green' : 'gray'}">${a.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="toggleAgente(${a.id})" title="${a.estado === 'activo' ? 'Desactivar' : 'Activar'}"><i class='bx ${a.estado === 'activo' ? 'bx-block' : 'bx-check-circle'}'></i></button></div></div>`).join(''); }
+async function loadAgentes(estado, cid) { const d = await api('/agentes?estado=' + estado); if (!d) return; const c = document.getElementById(cid); if (!c) return; if (!d.length) { c.innerHTML = '<div class="tbl-empty">Sem agentes.</div>'; return; } c.innerHTML = d.map(a => `<div class="tbl-row"><div class="col c2"><strong>${a.nome}</strong></div><div class="col c1">${a.nip}</div><div class="col c2">${a.user?.perfil?.descricao || a.user?.perfil?.nome || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c1">${a.patente?.nome || '-'}</div><div class="col c1"><span class="badge badge-${a.estado === 'activo' ? 'green' : 'gray'}">${a.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="toggleAgente(${a.id})" title="${a.estado === 'activo' ? 'Desactivar' : 'Activar'}"><i class='bx ${a.estado === 'activo' ? 'bx-block' : 'bx-check-circle'}'></i></button></div></div>`).join(''); }
 async function loadUnidades() { const d = await api('/unidades'); if (!d) return; const c = document.getElementById('list-unidades'); if (!c) return; c.innerHTML = d.map(u => `<div class="tbl-row"><div class="col c2"><strong>${u.nome}</strong></div><div class="col c2">${u.tipo_unidade?.nome || '-'}</div><div class="col c2">${u.endereco || '-'}</div><div class="col c1"><span class="badge badge-${u.estado === 'activo' ? 'green' : 'gray'}">${u.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="toggleUnidade(${u.id})"><i class='bx bx-power-off'></i></button></div></div>`).join(''); }
 function openIdTab(name, ev) { document.querySelectorAll('.idtab').forEach(t => t.classList.remove('active')); document.getElementById('idtab-' + name)?.classList.add('active'); if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } }
 
 async function criarAgente(ev) {
     ev.preventDefault(); limparErros();
+    const nomeEl = document.getElementById('ag-nome');
+    const nipEl = document.getElementById('ag-nip');
+    const biEl = document.getElementById('ag-bi');
+    const emailEl = document.getElementById('ag-email');
+    const telEl = document.getElementById('ag-tel');
+    if (nomeEl) nomeEl.value = nomeEl.value.trim().replace(/\s+/g, ' ');
+    if (nipEl) nipEl.value = normalizarNIP(nipEl.value);
+    if (biEl) biEl.value = normalizarBI(biEl.value);
+    if (emailEl) emailEl.value = emailEl.value.trim().toLowerCase();
+    if (telEl) telEl.value = normalizarTelefoneAO(telEl.value);
+
     let erros = [];
     erros.push(validarObrigatorio('ag-nome', 'Nome'));
     erros.push(validarCampo('ag-nome', validarNome));
     erros.push(validarObrigatorio('ag-nip', 'NIP'));
+    erros.push(validarCampo('ag-nip', validarNIP));
+    erros.push(validarObrigatorio('ag-bi', 'BI'));
+    erros.push(validarCampo('ag-bi', validarBI));
     erros.push(validarObrigatorio('ag-email', 'Email'));
-    erros.push(validarCampo('ag-email', validarEmail));
+    erros.push(validarCampo('ag-email', validarEmailInstitucional));
+    erros.push(validarObrigatorio('ag-tel', 'Telefone'));
+    erros.push(validarCampo('ag-tel', validarTelefone));
     erros.push(validarObrigatorio('ag-unidade', 'Unidade'));
-    erros.push(validarObrigatorio('ag-cargo', 'Cargo'));
     erros.push(validarObrigatorio('ag-patente', 'Patente'));
     erros.push(validarObrigatorio('ag-perfil', 'Perfil'));
-    erros.push(validarCampo('ag-tel', validarTelefone));
+    erros.push(validarOpcaoExistente('ag-unidade', 'Unidade'));
+    erros.push(validarOpcaoExistente('ag-patente', 'Patente'));
+    erros.push(validarOpcaoExistente('ag-perfil', 'Perfil'));
     erros = erros.filter(e => e !== null);
     if (erros.length) { toast('Corrija os erros assinalados.', 'err'); return false; }
 
     showLoad();
-    const d = await api('/agentes', { method: 'POST', body: JSON.stringify({ nome: v('ag-nome'), nip: v('ag-nip'), bi: v('ag-bi') || null, email: v('ag-email'), telefone: v('ag-tel') || null, sexo: v('ag-sexo') || null, unidade_id: v('ag-unidade'), cargo: v('ag-cargo'), patente_id: v('ag-patente'), perfil_id: v('ag-perfil'), estado: v('ag-estado') }) });
+    const d = await api('/agentes', { method: 'POST', body: JSON.stringify({ nome: v('ag-nome'), nip: v('ag-nip'), bi: v('ag-bi'), email: v('ag-email'), telefone: v('ag-tel'), sexo: v('ag-sexo') || null, unidade_id: v('ag-unidade'), patente_id: v('ag-patente'), perfil_id: v('ag-perfil'), estado: v('ag-estado') }) });
     hideLoad();
     if (d?.success) { toast('Agente registado com sucesso.', 'ok'); document.getElementById('form-agente')?.reset(); loadIdentidade(); openIdTab('ag-act'); }
     return false;
@@ -1112,7 +1247,7 @@ async function loadProcessos(page = 1) {
 function formNovoProcesso() {
     renderMain('processos', `<div class="page-header"><div><h1 class="page-title">Abrir Processo Criminal</h1><p class="page-desc">Criar novo processo a partir de uma ocorrência</p></div><button class="btn-ghost" onclick="voltarPara('processos')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados do Processo</div>
-        <div class="form-row"><div class="form-col"><label>Ocorrência *</label><select id="nproc-oc" required></select></div></div>
+        <div class="form-row"><div class="form-col"><label>Ocorrência</label><select id="nproc-oc" required></select></div></div>
         <div class="form-col" style="margin-bottom:14px;"><label>Resumo</label><textarea id="nproc-res" rows="4" placeholder="Resumo inicial do processo..."></textarea></div>
         <div class="form-row"><div class="form-col"><label><input type="checkbox" id="nproc-conf"> Processo Confidencial</label></div></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('processos')">Cancelar</button><button class="btn-primary" onclick="submitProcesso()"><i class='bx bx-folder-plus'></i> Abrir Processo</button></div>
@@ -1255,7 +1390,7 @@ async function viewInvestigacao(id) {
 function formAddNotaInvestigacao(invId) {
     const card = document.querySelector('#section-investigacoes .card:last-child');
     if (document.getElementById('nota-form-inline')) return;
-    const formH = `<div id="nota-form-inline" style="border:1px solid var(--border);padding:16px;border-radius:var(--r);margin-top:12px;background:var(--bg);"><div class="form-col" style="margin-bottom:10px;"><label>Título</label><input type="text" id="nota-tit" placeholder="Título da nota"></div><div class="form-col" style="margin-bottom:10px;"><label>Conteúdo *</label><textarea id="nota-cont" rows="3" placeholder="Descreva as diligências realizadas..."></textarea></div><div style="display:flex;gap:8px;"><button class="btn-primary btn-sm" onclick="submitNotaInvestigacao(${invId})"><i class='bx bx-save'></i> Guardar</button><button class="btn-ghost btn-sm" onclick="document.getElementById('nota-form-inline').remove()">Cancelar</button></div></div>`;
+    const formH = `<div id="nota-form-inline" style="border:1px solid var(--border);padding:16px;border-radius:var(--r);margin-top:12px;background:var(--bg);"><div class="form-col" style="margin-bottom:10px;"><label>Título</label><input type="text" id="nota-tit" placeholder="Título da nota"></div><div class="form-col" style="margin-bottom:10px;"><label>Conteúdo</label><textarea id="nota-cont" rows="3" placeholder="Descreva as diligências realizadas..."></textarea></div><div style="display:flex;gap:8px;"><button class="btn-primary btn-sm" onclick="submitNotaInvestigacao(${invId})"><i class='bx bx-save'></i> Guardar</button><button class="btn-ghost btn-sm" onclick="document.getElementById('nota-form-inline').remove()">Cancelar</button></div></div>`;
     if (card) card.insertAdjacentHTML('beforeend', formH);
 }
 
@@ -1303,8 +1438,8 @@ function previewEvidencia(evId, tipo, desc) {
 function formNovaEvidencia() {
     renderMain('evidencias', `<div class="page-header"><div><h1 class="page-title">Registar Nova Evidência</h1></div><button class="btn-ghost" onclick="voltarPara('evidencias')"><i class='bx bx-arrow-back'></i> Voltar</button></div>
     <div class="form-card"><div class="form-section">Dados da Evidência</div>
-        <div class="form-row"><div class="form-col"><label>Ocorrência *</label><select id="nev-oc" required></select></div><div class="form-col"><label>Tipo *</label>${mkSel('nev-tipo', aux.tipos_evidencia, 'id', 'nome')}</div></div>
-        <div class="form-col" style="margin-bottom:14px;"><label>Descrição *</label><textarea id="nev-desc" rows="3" required placeholder="Descreva a evidência..."></textarea></div>
+        <div class="form-row"><div class="form-col"><label>Ocorrência</label><select id="nev-oc" required></select></div><div class="form-col"><label>Tipo</label>${mkSel('nev-tipo', aux.tipos_evidencia, 'id', 'nome')}</div></div>
+        <div class="form-col" style="margin-bottom:14px;"><label>Descrição</label><textarea id="nev-desc" rows="3" required placeholder="Descreva a evidência..."></textarea></div>
         <div class="form-col" style="margin-bottom:14px;"><label>Ficheiro (imagem, vídeo, PDF, áudio)</label><input type="file" id="nev-file" accept="image/*,video/*,audio/*,.pdf"></div>
         <div id="nev-preview" style="margin-bottom:14px;"></div>
         <div class="form-actions"><button class="btn-ghost" onclick="voltarPara('evidencias')">Cancelar</button><button class="btn-primary" onclick="submitEvidencia()"><i class='bx bx-save'></i> Registar</button></div>

@@ -34,8 +34,6 @@
         </div>
     </div>
     @endforeach
-
-    <div class="pdf-footer">{{ $entidade }} - SCGD | {{ $data_geracao }}</div>
 </div>
 </body>
 </html>

@@ -119,8 +119,6 @@
     <div class="section-title">Parecer Final</div>
     <p style="font-size:10px;line-height:1.7;text-align:justify;border:1px solid #ccc;padding:10px;">{{ $proc->parecer_final }}</p>
     @endif
-
-    <div class="pdf-footer">{{ $entidade }} - SCGD | {{ $data_geracao }} | {{ $gerado_por }}</div>
 </div>
 </body>
 </html>

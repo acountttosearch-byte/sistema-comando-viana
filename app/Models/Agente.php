@@ -12,7 +12,7 @@ class Agente extends Model
 
     protected $fillable = [
         'user_id', 'nome', 'nip', 'bi', 'data_nascimento', 'sexo',
-        'telefone', 'morada', 'foto', 'patente_id', 'cargo',
+        'telefone', 'morada', 'foto', 'patente_id',
         'unidade_id', 'data_admissao', 'estado'
     ];
 

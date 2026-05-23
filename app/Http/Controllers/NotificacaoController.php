@@ -18,6 +18,8 @@ class NotificacaoController extends Controller
 
     public function marcarLida(Notificacao $notificacao)
     {
+        abort_unless($notificacao->user_id === auth()->id(), 403, 'Sem permissao para esta notificacao.');
+
         $notificacao->update(['lida' => true, 'data_leitura' => now()]);
         return response()->json(['success' => true]);
     }

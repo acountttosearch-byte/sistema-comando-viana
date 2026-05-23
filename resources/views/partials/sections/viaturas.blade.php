@@ -6,7 +6,7 @@
     <div class="filters">
         <div class="search-filter"><i class='bx bx-search'></i><input type="text" id="f-viat-busca" placeholder="Buscar por matrícula, marca ou modelo..."></div>
         <button class="btn-primary btn-sm" onclick="loadViaturas()"><i class='bx bx-search'></i> Buscar</button>
-        <select id="f-viat-estado" onchange="loadViaturas()"><option value="">Estado</option><option value="disponivel">Disponível</option><option value="em_uso">Em Uso</option><option value="manutencao">Manutenção</option><option value="abatida">Abatida</option></select>
+        <select id="f-viat-estado" onchange="loadViaturas()"><option value="">Estado</option><option value="operacional">Operacional</option><option value="manutencao">Manutenção</option><option value="inactiva">Inactiva</option><option value="abatida">Abatida</option></select>
         @if(in_array(auth()->user()->perfil->nome, ['admin', 'comandante']))
         <select id="f-viat-unidade" onchange="loadViaturas()"><option value="">Unidade</option></select>
         @endif

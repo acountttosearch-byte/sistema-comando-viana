@@ -1751,8 +1751,7 @@ body {
     }
 
     .nav-item span,
-    .nav-label,
-    .sidebar-footer {
+    .nav-label {
         display: none
     }
 

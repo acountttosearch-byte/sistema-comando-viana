@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EscalaTurno;
+use App\Models\Agente;
 use App\Models\Turno;
 use Illuminate\Http\Request;
 
@@ -23,8 +24,18 @@ class TurnoController extends Controller
 
     public function definirEscala(Request $request)
     {
-        $request->validate(['escalas' => 'required|array', 'escalas.*.agente_id' => 'required|exists:agentes,id', 'escalas.*.turno_id' => 'required|exists:turnos,id', 'escalas.*.data' => 'required|date', 'escalas.*.unidade_id' => 'required|exists:unidades,id']);
-        foreach ($request->escalas as $e) {
+        $dados = $request->validate([
+            'escalas' => 'required|array|min:1',
+            'escalas.*.agente_id' => 'required|distinct|exists:agentes,id',
+            'escalas.*.turno_id' => 'required|exists:turnos,id',
+            'escalas.*.data' => 'required|date|after_or_equal:today',
+            'escalas.*.unidade_id' => 'required|exists:unidades,id',
+        ]);
+
+        foreach ($dados['escalas'] as $e) {
+            $agente = Agente::activos()->find($e['agente_id']);
+            abort_unless($agente && (int) $agente->unidade_id === (int) $e['unidade_id'], 422, 'Todos os agentes devem estar activos e pertencer a unidade da escala.');
+
             EscalaTurno::updateOrCreate(
                 ['agente_id' => $e['agente_id'], 'data' => $e['data']],
                 ['turno_id' => $e['turno_id'], 'unidade_id' => $e['unidade_id'], 'estado' => 'confirmado']

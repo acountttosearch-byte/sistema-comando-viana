@@ -51,7 +51,4 @@
         </div>
         @endif
     </nav>
-
-    <div class="sidebar-footer">
-    </div>
 </aside>

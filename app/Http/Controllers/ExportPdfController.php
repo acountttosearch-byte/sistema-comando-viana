@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesOperationalAccess;
 use App\Models\Ocorrencia;
 use App\Models\Detencao;
 use App\Models\Agente;
@@ -15,16 +16,25 @@ use Illuminate\Http\Request;
 
 class ExportPdfController extends Controller
 {
+    use AuthorizesOperationalAccess;
+
     public function relatorioCriminalidade(Request $request)
     {
         $request->validate([
             'periodo_inicio' => 'required|date',
-            'periodo_fim' => 'required|date',
+            'periodo_fim' => 'required|date|after_or_equal:periodo_inicio|before_or_equal:today',
+            'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
         $inicio = $request->periodo_inicio;
         $fim = $request->periodo_fim;
         $uid = $request->unidade_id;
+
+        if ($uid) {
+            $this->exigirUnidadePermitida((int) $uid);
+        } elseif ($this->eChefeEsquadra()) {
+            $uid = $this->unidadeAtualId();
+        }
 
         $qOc = Ocorrencia::whereDate('data_ocorrencia', '>=', $inicio)
                           ->whereDate('data_ocorrencia', '<=', $fim);
@@ -94,6 +104,8 @@ class ExportPdfController extends Controller
 
     public function fichaOcorrencia(Ocorrencia $ocorrencia)
     {
+        $this->exigirOcorrenciaPermitida($ocorrencia);
+
         $ocorrencia->load([
             'tipoCrime.categoria', 'estado', 'agenteRegisto', 'agenteResponsavel',
             'unidade', 'envolvimentos.pessoa', 'envolvimentos.tipoEnvolvimento',
@@ -116,6 +128,8 @@ class ExportPdfController extends Controller
 
     public function fichaDetencao(Detencao $detencao)
     {
+        $this->exigirDetencaoPermitida($detencao);
+
         $detencao->load(['pessoa', 'ocorrencia.tipoCrime', 'agenteResponsavel', 'unidade', 'estado']);
 
         $data = [
@@ -133,9 +147,16 @@ class ExportPdfController extends Controller
 
     public function listaAgentes(Request $request)
     {
+        abort_unless($this->temVisaoGlobal() || $this->eChefeEsquadra(), 403, 'Sem permissao.');
+
         $q = Agente::with(['patente', 'unidade', 'user.perfil'])->orderBy('nome');
         if ($request->filled('estado')) $q->where('estado', $request->estado);
-        if ($request->filled('unidade_id')) $q->where('unidade_id', $request->unidade_id);
+        if ($request->filled('unidade_id')) {
+            $this->exigirUnidadePermitida((int) $request->unidade_id);
+            $q->where('unidade_id', $request->unidade_id);
+        } elseif ($this->eChefeEsquadra()) {
+            $q->where('unidade_id', $this->unidadeAtualId());
+        }
 
         $data = [
             'agentes' => $q->get(),
@@ -153,6 +174,8 @@ class ExportPdfController extends Controller
 
     public function relatorioAlertas(Request $request)
     {
+        abort_unless($this->temVisaoGlobal() || $this->eChefeEsquadra(), 403, 'Sem permissao.');
+
         $q = Alerta::with(['tipoAlerta', 'pessoa', 'criadoPor'])->orderByDesc('created_at');
         if ($request->filled('estado')) $q->where('estado', $request->estado);
 
@@ -171,6 +194,8 @@ class ExportPdfController extends Controller
 
     public function fichaProcesso(ProcessoCriminal $processo)
     {
+        $this->exigirProcessoPermitido($processo);
+
         $processo->load([
             'ocorrencia.tipoCrime.categoria', 'ocorrencia.estado',
             'ocorrencia.agenteRegisto', 'ocorrencia.agenteResponsavel',
@@ -197,6 +222,8 @@ class ExportPdfController extends Controller
 
     public function fichaInvestigacao(Investigacao $investigacao)
     {
+        $this->exigirInvestigacaoPermitida($investigacao);
+
         $investigacao->load([
             'ocorrencia.tipoCrime.categoria', 'ocorrencia.estado',
             'ocorrencia.unidade', 'ocorrencia.envolvimentos.pessoa',

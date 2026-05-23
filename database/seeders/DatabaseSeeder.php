@@ -38,14 +38,15 @@ class DatabaseSeeder extends Seeder
         DB::table('patentes')->insert([
             ['id' => 1, 'nome' => 'Comissário', 'abreviatura' => 'COM', 'nivel_hierarquico' => 10, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'nome' => 'Subcomissário', 'abreviatura' => 'SCOM', 'nivel_hierarquico' => 9, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'nome' => 'Intendente', 'abreviatura' => 'INT', 'nivel_hierarquico' => 8, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'nome' => 'Subintendente', 'abreviatura' => 'SINT', 'nivel_hierarquico' => 7, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 5, 'nome' => 'Inspector', 'abreviatura' => 'INSP', 'nivel_hierarquico' => 6, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 6, 'nome' => 'Subinspector', 'abreviatura' => 'SINSP', 'nivel_hierarquico' => 5, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 7, 'nome' => 'Chefe', 'abreviatura' => 'CH', 'nivel_hierarquico' => 4, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'nome' => 'Superintendente', 'abreviatura' => 'SUP', 'nivel_hierarquico' => 8, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'nome' => 'Intendente', 'abreviatura' => 'INT', 'nivel_hierarquico' => 7, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'nome' => 'Subintendente', 'abreviatura' => 'SINT', 'nivel_hierarquico' => 6, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 6, 'nome' => 'Inspector', 'abreviatura' => 'INSP', 'nivel_hierarquico' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 7, 'nome' => 'Subinspector', 'abreviatura' => 'SINSP', 'nivel_hierarquico' => 4, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 8, 'nome' => 'Subchefe', 'abreviatura' => 'SCH', 'nivel_hierarquico' => 3, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 9, 'nome' => 'Agente de 1ª Classe', 'abreviatura' => 'AG1', 'nivel_hierarquico' => 2, 'created_at' => now(), 'updated_at' => now()],
             ['id' => 10, 'nome' => 'Agente de 2ª Classe', 'abreviatura' => 'AG2', 'nivel_hierarquico' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 11, 'nome' => 'Agente de 3ª Classe', 'abreviatura' => 'AG3', 'nivel_hierarquico' => 1, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════
@@ -121,7 +122,7 @@ class DatabaseSeeder extends Seeder
 
         DB::table('agentes')->insert([
             'id' => 1, 'user_id' => 1, 'nome' => 'Administrador do Sistema',
-            'nip' => 'ADMIN-001', 'patente_id' => 1, 'cargo' => 'Administrador',
+            'nip' => 'ADMIN-001', 'patente_id' => 1,
             'unidade_id' => 1, 'estado' => 'activo',
             'created_at' => now(), 'updated_at' => now(),
         ]);

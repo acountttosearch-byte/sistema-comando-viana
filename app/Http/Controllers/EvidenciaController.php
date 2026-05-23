@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Evidencia;
+use App\Http\Controllers\Concerns\AuthorizesOperationalAccess;
+use App\Models\Agente;
 use App\Models\CadeiaCustodia;
+use App\Models\Evidencia;
 use App\Models\Log;
+use App\Models\Ocorrencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class EvidenciaController extends Controller
 {
+    use AuthorizesOperationalAccess;
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -17,13 +22,12 @@ class EvidenciaController extends Controller
         $agenteId = $user->agente?->id;
         $q = Evidencia::with(['ocorrencia.unidade', 'tipoEvidencia', 'agenteRegisto']);
 
-        // RBAC
-        if (in_array($perfil, ['admin', 'comandante'])) {
-            // visão global
+        if (in_array($perfil, ['admin', 'comandante'], true)) {
+            // visao global
         } elseif ($perfil === 'chefe_esquadra') {
-            $q->whereHas('ocorrencia', fn($q2) => $q2->where('unidade_id', $user->unidade_id));
-        } else {
-            if ($agenteId) $q->where('agente_registo_id', $agenteId);
+            $q->whereHas('ocorrencia', fn($q2) => $q2->where('unidade_id', $this->unidadeAtualId()));
+        } elseif ($agenteId) {
+            $q->where('agente_registo_id', $agenteId);
         }
 
         if ($request->filled('ocorrencia_id')) $q->where('ocorrencia_id', $request->ocorrencia_id);
@@ -34,84 +38,117 @@ class EvidenciaController extends Controller
             $q->where(fn($q2) => $q2->where('codigo', 'like', "%$b%")->orWhere('descricao', 'like', "%$b%"));
         }
 
-        return response()->json($q->orderByDesc('created_at')->paginate($request->per_page ?? 20));
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        return response()->json($q->orderByDesc('created_at')->paginate($perPage));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $dados = $request->validate([
             'ocorrencia_id' => 'required|exists:ocorrencias,id',
             'tipo_evidencia_id' => 'required|exists:tipos_evidencia,id',
-            'descricao' => 'required|string|max:500',
-            'ficheiro' => 'nullable|file|max:51200',
+            'descricao' => 'required|string|min:3|max:500',
+            'localizacao_fisica' => 'nullable|string|max:200',
+            'ficheiro' => 'nullable|file|max:51200|mimes:jpg,jpeg,png,webp,pdf,doc,docx,mp3,wav,mp4,mov,avi',
         ]);
 
-        $ag = auth()->user()->agente;
-        $dados = [
+        $ocorrencia = Ocorrencia::findOrFail($dados['ocorrencia_id']);
+        $this->exigirOcorrenciaPermitida($ocorrencia);
+
+        $ag = $this->agenteAtual();
+        abort_unless($ag, 422, 'O utilizador autenticado deve estar associado a um agente.');
+
+        $dadosCriacao = [
             'codigo' => Evidencia::gerarCodigo(),
-            'ocorrencia_id' => $request->ocorrencia_id,
-            'tipo_evidencia_id' => $request->tipo_evidencia_id,
-            'descricao' => $request->descricao,
-            'localizacao_fisica' => $request->localizacao_fisica,
+            'ocorrencia_id' => $dados['ocorrencia_id'],
+            'tipo_evidencia_id' => $dados['tipo_evidencia_id'],
+            'descricao' => $dados['descricao'],
+            'localizacao_fisica' => $dados['localizacao_fisica'] ?? null,
             'agente_registo_id' => $ag->id,
             'estado' => 'em_custodia',
         ];
 
         if ($request->hasFile('ficheiro')) {
             $file = $request->file('ficheiro');
-            $dados['ficheiro'] = $file->store('evidencias/' . date('Y/m'), 'local');
-            $dados['tamanho_ficheiro'] = $file->getSize();
-            $dados['hash_ficheiro'] = hash_file('sha256', $file->getRealPath());
+            $dadosCriacao['ficheiro'] = $file->store('evidencias/' . date('Y/m'), 'local');
+            $dadosCriacao['tamanho_ficheiro'] = $file->getSize();
+            $dadosCriacao['hash_ficheiro'] = hash_file('sha256', $file->getRealPath());
         }
 
-        $ev = Evidencia::create($dados);
-        Log::registar('criar', 'evidencias', $ev->id, "Evidência {$ev->codigo} registada");
-        return response()->json(['success' => true, 'message' => 'Evidência registada.', 'evidencia' => $ev->load('tipoEvidencia')], 201);
+        $ev = Evidencia::create($dadosCriacao);
+
+        CadeiaCustodia::create([
+            'evidencia_id' => $ev->id,
+            'agente_origem_id' => $ag->id,
+            'agente_destino_id' => $ag->id,
+            'local_origem' => 'Registo inicial',
+            'local_destino' => $ev->localizacao_fisica ?: 'Arquivo de evidencias',
+            'data_transferencia' => now(),
+            'motivo' => 'Entrada inicial da evidencia no sistema',
+        ]);
+
+        Log::registar('criar', 'evidencias', $ev->id, "Evidencia {$ev->codigo} registada");
+
+        return response()->json(['success' => true, 'message' => 'Evidencia registada.', 'evidencia' => $ev->load('tipoEvidencia')], 201);
     }
 
     public function show(Evidencia $evidencia)
     {
+        $this->exigirEvidenciaPermitida($evidencia);
+
         return response()->json($evidencia->load([
             'ocorrencia.tipoCrime', 'ocorrencia.unidade', 'tipoEvidencia',
-            'agenteRegisto', 'cadeiaCustodia.agenteOrigem', 'cadeiaCustodia.agenteDestino'
+            'agenteRegisto', 'cadeiaCustodia.agenteOrigem', 'cadeiaCustodia.agenteDestino',
         ]));
     }
 
     public function ficheiro(Evidencia $evidencia)
     {
+        $this->exigirEvidenciaPermitida($evidencia);
+
         if (!$evidencia->ficheiro || !Storage::disk('local')->exists($evidencia->ficheiro)) {
-            return response()->json(['error' => 'Ficheiro não encontrado.'], 404);
+            return response()->json(['error' => 'Ficheiro nao encontrado.'], 404);
         }
-        $path = Storage::disk('local')->path($evidencia->ficheiro);
-        return response()->file($path);
+
+        return response()->file(Storage::disk('local')->path($evidencia->ficheiro));
     }
 
     public function transferirCustodia(Request $request, Evidencia $evidencia)
     {
-        $request->validate([
+        $this->exigirEvidenciaPermitida($evidencia);
+
+        $dados = $request->validate([
             'agente_destino_id' => 'required|exists:agentes,id',
-            'local_destino' => 'required|string|max:200',
-            'motivo' => 'required|string|max:300',
+            'local_origem' => 'nullable|string|max:200',
+            'local_destino' => 'required|string|min:3|max:200',
+            'motivo' => 'required|string|min:5|max:300',
+            'observacoes' => 'nullable|string|max:1000',
         ]);
+
+        $destino = Agente::activos()->find($dados['agente_destino_id']);
+        abort_unless($destino, 422, 'O agente de destino deve estar activo.');
 
         CadeiaCustodia::create([
             'evidencia_id' => $evidencia->id,
-            'agente_origem_id' => auth()->user()->agente->id,
-            'agente_destino_id' => $request->agente_destino_id,
-            'local_origem' => $request->local_origem ?? $evidencia->localizacao_fisica ?? 'N/A',
-            'local_destino' => $request->local_destino,
+            'agente_origem_id' => $this->agenteAtualId(),
+            'agente_destino_id' => $dados['agente_destino_id'],
+            'local_origem' => $dados['local_origem'] ?? $evidencia->localizacao_fisica ?? 'N/A',
+            'local_destino' => $dados['local_destino'],
             'data_transferencia' => now(),
-            'motivo' => $request->motivo,
-            'observacoes' => $request->observacoes,
+            'motivo' => $dados['motivo'],
+            'observacoes' => $dados['observacoes'] ?? null,
         ]);
 
-        $evidencia->update(['localizacao_fisica' => $request->local_destino]);
-        Log::registar('criar', 'cadeia_custodia', $evidencia->id, "Custódia transferida");
-        return response()->json(['success' => true, 'message' => 'Custódia transferida.']);
+        $evidencia->update(['localizacao_fisica' => $dados['local_destino']]);
+        Log::registar('criar', 'cadeia_custodia', $evidencia->id, 'Custodia transferida');
+
+        return response()->json(['success' => true, 'message' => 'Custodia transferida.']);
     }
 
     public function historicoCustodia(Evidencia $evidencia)
     {
+        $this->exigirEvidenciaPermitida($evidencia);
+
         return response()->json($evidencia->cadeiaCustodia()->with(['agenteOrigem', 'agenteDestino'])->orderBy('data_transferencia')->get());
     }
 }

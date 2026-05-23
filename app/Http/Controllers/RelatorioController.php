@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesOperationalAccess;
 use App\Models\Relatorio;
 use App\Models\Ocorrencia;
 use App\Models\Detencao;
@@ -14,6 +15,8 @@ use Illuminate\Http\Request;
 
 class RelatorioController extends Controller
 {
+    use AuthorizesOperationalAccess;
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -34,21 +37,32 @@ class RelatorioController extends Controller
 
     public function show(Relatorio $relatorio)
     {
+        if ($relatorio->unidade_id) {
+            $this->exigirUnidadePermitida($relatorio->unidade_id);
+        }
+
         return response()->json($relatorio->load(['tipoRelatorio', 'geradoPor', 'unidade']));
     }
 
     public function gerar(Request $request)
     {
-        $request->validate([
+        $dadosValidados = $request->validate([
             'tipo_relatorio_id' => 'required|exists:tipos_relatorio,id',
             'periodo_inicio' => 'required|date',
-            'periodo_fim' => 'required|date|after_or_equal:periodo_inicio',
+            'periodo_fim' => 'required|date|after_or_equal:periodo_inicio|before_or_equal:today',
+            'unidade_id' => 'nullable|exists:unidades,id',
         ]);
 
-        $inicio = $request->periodo_inicio;
-        $fim = $request->periodo_fim;
-        $uid = $request->unidade_id;
-        $tipoId = (int) $request->tipo_relatorio_id;
+        $inicio = $dadosValidados['periodo_inicio'];
+        $fim = $dadosValidados['periodo_fim'];
+        $uid = $dadosValidados['unidade_id'] ?? null;
+        $tipoId = (int) $dadosValidados['tipo_relatorio_id'];
+
+        if ($uid) {
+            $this->exigirUnidadePermitida((int) $uid);
+        } elseif ($this->eChefeEsquadra()) {
+            $uid = $this->unidadeAtualId();
+        }
 
         // Gerar dados conforme o tipo de relatório
         $dados = match ($tipoId) {

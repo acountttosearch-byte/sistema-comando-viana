@@ -114,8 +114,6 @@
     <div class="info-row"><span class="info-label">Tribunal:</span><span class="info-value">{{ $tribunal }}</span></div>
     <div class="info-row"><span class="info-label">Arquivadas:</span><span class="info-value">{{ $arquivadas }}</span></div>
     <div class="info-row"><span class="info-label">Detencoes:</span><span class="info-value">{{ $total_detencoes }}</span></div>
-
-    <div class="pdf-footer">{{ $entidade }} - Documento gerado pelo SCGD | {{ $data_geracao }}</div>
 </div>
 </body>
 </html>

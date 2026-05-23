@@ -20,7 +20,6 @@ return new class extends Migration
             $table->string('morada', 300)->nullable();
             $table->string('foto', 500)->nullable();
             $table->foreignId('patente_id')->nullable()->constrained('patentes');
-            $table->string('cargo', 100)->nullable();
             $table->foreignId('unidade_id')->constrained('unidades');
             $table->date('data_admissao')->nullable();
             $table->enum('estado', ['activo', 'inactivo', 'suspenso', 'transferido'])->default('activo');
