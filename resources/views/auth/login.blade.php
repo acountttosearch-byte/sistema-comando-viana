@@ -167,10 +167,6 @@
                 <div class="login-error">{{ $errors->first() }}</div>
             @endif
 
-            <div class="form-group" style="width:100%;display:flex;justify-content:flex-end;">
-                <div class="login-link">Recuperacao de acesso via administrador</div>
-            </div>
-
             <button class="login-btn" type="submit" id="login-btn">
                 <span class="spinner-btn" id="login-spinner"></span>
                 <span>Entrar</span>

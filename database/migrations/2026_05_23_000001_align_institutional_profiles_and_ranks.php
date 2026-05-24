@@ -12,6 +12,10 @@ return new class extends Migration
             return;
         }
 
+        if (DB::table('patentes')->count() === 0) {
+            return;
+        }
+
         $patenteAntiga = 'Che' . 'fe';
         $patenteRemovida = DB::table('patentes')->where('nome', $patenteAntiga)->first();
         $subchefe = DB::table('patentes')->where('nome', 'Subchefe')->first();
