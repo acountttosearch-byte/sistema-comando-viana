@@ -54,18 +54,31 @@ class AgenteController extends Controller
             $q->where(fn($q2) => $q2->where('nome', 'like', "%$b%")->orWhere('nip', 'like', "%$b%")->orWhere('bi', 'like', "%$b%"));
         }
 
-        return response()->json($q->orderBy('nome')->get());
+        $q->orderBy('nome');
+
+        if ($request->filled('page') || $request->filled('per_page')) {
+            $perPage = min((int) $request->input('per_page', 10), 50);
+            return response()->json($q->paginate($perPage));
+        }
+
+        return response()->json($q->get());
+    }
+
+    public function proximoNip()
+    {
+        return response()->json(['nip' => $this->gerarProximoNip()]);
     }
 
     public function store(Request $request)
     {
         $this->normalizarDadosAgente($request, true);
+        $request->merge(['nip' => $this->gerarProximoNip()]);
 
         $dados = $request->validate([
             'nome' => ['required', 'string', 'min:3', 'max:200', 'regex:/^[\pL\s\'-]+$/u'],
             'nip' => ['required', 'string', 'max:50', 'regex:/^NIP-\d{5}$/', 'unique:agentes,nip'],
             'bi' => ['required', 'string', 'max:30', 'regex:/^\d{10}[A-Z]{2}\d{3}$/', $this->regraCodigoProvinciaBI(), 'unique:agentes,bi'],
-            'email' => ['required', 'email:rfc', 'max:150', 'ends_with:@policia-viana.ao', 'unique:users,email'],
+            'email' => ['required', 'email:rfc', 'max:150', 'regex:/^[a-z._-]+@policia-viana\.ao$/', $this->regraEmailPrimeiroNome(), 'unique:users,email'],
             'telefone' => ['required', 'string', 'max:20', 'regex:/^\+2449\d{8}$/', 'unique:agentes,telefone'],
             'data_nascimento' => 'nullable|date|before_or_equal:today',
             'sexo' => 'nullable|in:M,F',
@@ -78,7 +91,7 @@ class AgenteController extends Controller
             'nome.regex' => 'O nome deve conter apenas letras, espacos, apostrofos ou hifens.',
             'nip.regex' => 'Informe um NIP valido no formato NIP-00000.',
             'bi.regex' => 'Informe um BI angolano valido. Ex: 0012345678LA042.',
-            'email.ends_with' => 'O email institucional deve terminar com @policia-viana.ao.',
+            'email.regex' => 'O email institucional deve usar apenas letras e os separadores ponto, hifen ou underscore antes de @policia-viana.ao.',
             'telefone.regex' => 'Informe um telefone movel angolano valido. Ex: +244 923 000 000.',
             'nip.unique' => 'Ja existe um agente com este NIP.',
             'bi.unique' => 'Ja existe um agente registado com este numero de BI.',
@@ -120,7 +133,31 @@ class AgenteController extends Controller
 
     public function show(Agente $agente)
     {
-        return response()->json($agente->load(['user.perfil', 'patente', 'unidade', 'ocorrenciasResponsavel.tipoCrime', 'detencoes', 'investigacoes']));
+        abort_unless($this->podeVerAgente($agente), 403, 'Sem permissao para consultar este agente.');
+
+        $agente->load([
+            'user.perfil',
+            'patente',
+            'unidade.tipoUnidade',
+            'ocorrenciasRegistadas' => fn ($q) => $q->with(['tipoCrime', 'estado', 'unidade'])->latest('data_ocorrencia')->limit(10),
+            'ocorrenciasResponsavel' => fn ($q) => $q->with(['tipoCrime', 'estado', 'unidade'])->latest('data_ocorrencia')->limit(10),
+            'detencoes' => fn ($q) => $q->with(['pessoa', 'estado', 'ocorrencia.tipoCrime'])->latest('data_detencao')->limit(10),
+            'investigacoes' => fn ($q) => $q->with(['ocorrencia.tipoCrime', 'estado'])->latest('data_inicio')->limit(10),
+            'patrulhas' => fn ($q) => $q->with(['turno', 'zona', 'unidade', 'viatura'])->latest('data')->limit(10),
+            'armamentoAtribuido.armamento.tipoArmamento',
+            'viaturasAtribuidas' => fn ($q) => $q->with('viatura')->whereNull('data_retorno')->latest('data_saida')->limit(5),
+        ])->loadCount([
+            'ocorrenciasRegistadas',
+            'ocorrenciasResponsavel',
+            'detencoes',
+            'investigacoes',
+            'patrulhas',
+            'alertasCriados',
+            'despachosRecebidos',
+            'evidenciasRegistadas',
+        ]);
+
+        return response()->json($agente);
     }
 
     public function update(Request $request, Agente $agente)
@@ -191,6 +228,23 @@ class AgenteController extends Controller
         };
     }
 
+    private function podeVerAgente(Agente $agente): bool
+    {
+        $user = auth()->user();
+        $perfil = $user?->perfil?->nome;
+        $agenteAtual = $user?->agente;
+
+        if (in_array($perfil, ['admin', 'comandante'], true)) {
+            return true;
+        }
+
+        if ($perfil === 'chefe_esquadra') {
+            return $agenteAtual && (int) $agenteAtual->unidade_id === (int) $agente->unidade_id;
+        }
+
+        return $agenteAtual && (int) $agenteAtual->id === (int) $agente->id;
+    }
+
     private function normalizarDadosAgente(Request $request, bool $incluirEmail): void
     {
         $dados = [
@@ -201,7 +255,7 @@ class AgenteController extends Controller
         ];
 
         if ($incluirEmail) {
-            $dados['email'] = Str::lower(trim((string) $request->input('email')));
+            $dados['email'] = preg_replace('/[^a-z@._-]/', '', Str::lower(trim((string) $request->input('email'))));
         }
 
         $request->merge($dados);
@@ -213,6 +267,22 @@ class AgenteController extends Controller
         $numero = preg_replace('/\D/', '', preg_replace('/^NIP-?/i', '', $nip));
 
         return $numero !== '' ? 'NIP-' . substr($numero, 0, 5) : substr($nip, 0, 9);
+    }
+
+    private function gerarProximoNip(): string
+    {
+        $ultimoNumero = Agente::query()
+            ->where('nip', 'like', 'NIP-%')
+            ->pluck('nip')
+            ->reduce(function (int $maior, string $nip): int {
+                if (preg_match('/^NIP-(\d{5})$/', $nip, $m)) {
+                    return max($maior, (int) $m[1]);
+                }
+
+                return $maior;
+            }, 0);
+
+        return 'NIP-' . str_pad((string) ($ultimoNumero + 1), 5, '0', STR_PAD_LEFT);
     }
 
     private function normalizarTelefone(string $telefone): string
@@ -239,5 +309,30 @@ class AgenteController extends Controller
                 $fail("O codigo provincial do BI ({$codigoProvincia}) nao corresponde a uma provincia valida de Angola.");
             }
         };
+    }
+
+    private function regraEmailPrimeiroNome(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            $primeiroNome = $this->chaveEmailNome((string) request()->input('nome'));
+            $parteLocal = explode('@', (string) $value)[0] ?? '';
+            $parteLocal = preg_replace('/[^a-z]/', '', $parteLocal);
+
+            if ($primeiroNome !== '' && !Str::startsWith($parteLocal, $primeiroNome)) {
+                $fail("O email institucional deve comecar pelo primeiro nome informado ({$primeiroNome}).");
+            }
+        };
+    }
+
+    private function chaveEmailNome(string $nome): string
+    {
+        $nome = Str::of($nome)
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/[^a-z\s\'-]/', '')
+            ->squish()
+            ->value();
+
+        return explode(' ', $nome)[0] ?? '';
     }
 }

@@ -52,7 +52,7 @@ Validacao de formularios:
 Os campos obrigatorios continuam tecnicamente obrigatorios no HTML e no backend. A interface deixou de depender de asteriscos visuais, mas as regras permanecem activas no servidor.
 
 Registo institucional de agentes:
-Novas contas de agentes devem usar email institucional com dominio @policia-viana.ao, NIP no formato NIP-00000, BI angolano no formato 0012345678LA042 e telefone movel angolano coerente com o indicativo nacional. O codigo provincial do BI e validado contra a lista de 21 provincias de Angola configurada no sistema, e as letras digitadas em minusculas sao normalizadas para maiusculas.
+Novas contas de agentes devem usar email institucional com dominio @policia-viana.ao, sem numeros antes do @, e a parte local do email deve comecar pelo primeiro nome informado no cadastro. O NIP deve seguir o formato NIP-00000, o BI angolano deve seguir o formato 0012345678LA042 e o telefone movel deve ser coerente com o indicativo nacional. O codigo provincial do BI e validado contra a lista de 21 provincias de Angola configurada no sistema, e as letras digitadas em minusculas sao normalizadas para maiusculas.
 
 Datas:
 Ocorrencias e detencoes nao devem aceitar datas futuras quando o fluxo representa factos ja ocorridos. Patrulhas podem ser planeadas para datas futuras.
@@ -79,6 +79,9 @@ Centraliza o registo, consulta, triagem, despacho e acompanhamento de factos pol
 
 Pessoas:
 Mantem dados de suspeitos, vitimas e testemunhas, permitindo associacao com ocorrencias e detencoes.
+
+Perfil do Agente:
+Permite consultar os dados relevantes de cada agente, incluindo identificacao, perfil, patente, unidade, contacto, estado, ocorrencias registadas, ocorrencias sob responsabilidade, detencoes, investigacoes, patrulhas e recursos operacionais atribuidos.
 
 Detencoes:
 Regista detidos, motivo, local, data, agente responsavel, unidade e estado da detencao.

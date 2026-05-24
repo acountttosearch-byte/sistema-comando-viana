@@ -35,6 +35,7 @@ Route::middleware('auth:web')->group(function () {
 
     // Agentes
     Route::get('/agentes', [AgenteController::class, 'index']);
+    Route::get('/agentes/proximo-nip', [AgenteController::class, 'proximoNip'])->middleware('perfil:admin');
     Route::post('/agentes', [AgenteController::class, 'store'])->middleware('perfil:admin');
     Route::get('/agentes/{agente}', [AgenteController::class, 'show']);
     Route::put('/agentes/{agente}', [AgenteController::class, 'update'])->middleware('perfil:admin');

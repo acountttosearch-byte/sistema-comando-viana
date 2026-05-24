@@ -108,6 +108,16 @@ function normalizarTelefoneAO(val) {
     return digits.slice(0, 12);
 }
 
+function chaveEmailNome(val) {
+    return (val || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z\s'-]/g, '')
+        .split(/\s+/)[0] || '';
+}
+
 function validarNome(val) {
     const nome = (val || '').trim().replace(/\s+/g, ' ');
     if (!nome || nome.length < 3) return 'Nome deve ter no minimo 3 caracteres.';
@@ -159,7 +169,10 @@ function validarEmailInstitucional(val) {
     if (emailErro) return emailErro;
     if (!val) return null;
     val = val.trim().toLowerCase();
-    if (!/^[a-z0-9._%+-]+@policia-viana\.ao$/.test(val)) return 'Use o email institucional @policia-viana.ao.';
+    if (!/^[a-z._-]+@policia-viana\.ao$/.test(val)) return 'Email institucional nao pode conter numeros. Use apenas letras, ponto, hifen ou underscore.';
+    const primeiroNome = chaveEmailNome(v('ag-nome'));
+    const local = val.split('@')[0].replace(/[^a-z]/g, '');
+    if (primeiroNome && !local.startsWith(primeiroNome)) return 'O email deve comecar pelo primeiro nome informado: ' + primeiroNome + '@policia-viana.ao.';
     return null;
 }
 
@@ -299,6 +312,7 @@ async function loadAux() {
     fillSel('rel-tipo', aux.tipos_relatorio, 'id', 'nome', 'Selecionar');
     fillSel('rel-unidade', aux.unidades, 'id', 'nome', 'Todas');
     initNormalizacaoAgente();
+    carregarProximoNip();
 }
 
 function fillSel(id, items, vk, tk, ph) { const el = document.getElementById(id); if (!el || !items) return; el.innerHTML = `<option value="">${ph}</option>` + items.map(i => `<option value="${i[vk]}">${i[tk]}</option>`).join(''); }
@@ -324,8 +338,15 @@ function initNormalizacaoAgente() {
     bind('ag-bi', normalizarBI);
     bind('ag-nip', normalizarNIP);
     bind('ag-tel', normalizarTelefoneAO);
-    bind('ag-email', v => (v || '').trim().toLowerCase().replace(/\s/g, '').slice(0, 150));
+    bind('ag-email', v => (v || '').trim().toLowerCase().replace(/[^a-z@._-]/g, '').slice(0, 150));
     bind('ag-nome', v => (v || '').replace(/\s+/g, ' ').replace(/[^\p{L}\s\-']/gu, '').slice(0, 200));
+}
+
+async function carregarProximoNip() {
+    const el = document.getElementById('ag-nip');
+    if (!el) return;
+    const d = await api('/agentes/proximo-nip');
+    if (d?.nip) el.value = d.nip;
 }
 
 function mkSel(id, items, vk, tk, ph = 'Selecionar', req = true) {
@@ -1166,10 +1187,96 @@ async function submitPatrulha() { const ags = Array.from(document.getElementById
 // ══════════════════
 // IDENTIDADE (Agentes / Unidades)
 // ══════════════════
-async function loadIdentidade() { loadAgentes('activo', 'list-ag-act'); loadAgentes('inactivo', 'list-ag-ina'); loadUnidades(); }
-async function loadAgentes(estado, cid) { const d = await api('/agentes?estado=' + estado); if (!d) return; const c = document.getElementById(cid); if (!c) return; if (!d.length) { c.innerHTML = '<div class="tbl-empty">Sem agentes.</div>'; return; } c.innerHTML = d.map(a => `<div class="tbl-row"><div class="col c2"><strong>${a.nome}</strong></div><div class="col c1">${a.nip}</div><div class="col c2">${a.user?.perfil?.descricao || a.user?.perfil?.nome || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c1">${a.patente?.nome || '-'}</div><div class="col c1"><span class="badge badge-${a.estado === 'activo' ? 'green' : 'gray'}">${a.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="toggleAgente(${a.id})" title="${a.estado === 'activo' ? 'Desactivar' : 'Activar'}"><i class='bx ${a.estado === 'activo' ? 'bx-block' : 'bx-check-circle'}'></i></button></div></div>`).join(''); }
+async function loadIdentidade() { loadAgentesActivos(); loadAgentesInactivos(); loadUnidades(); }
+function loadAgentesActivos(page = 1) { return loadAgentes('activo', 'list-ag-act', 'pag-ag-act', page); }
+function loadAgentesInactivos(page = 1) { return loadAgentes('inactivo', 'list-ag-ina', 'pag-ag-ina', page); }
+async function loadAgentes(estado, cid, pagId, page = 1) {
+    const d = await api('/agentes?estado=' + estado + '&page=' + page + '&per_page=10');
+    if (!d) return;
+    const c = document.getElementById(cid);
+    if (!c) return;
+    const items = d.data || [];
+    if (!items.length) { c.innerHTML = '<div class="tbl-empty">Sem agentes.</div>'; renderPag(pagId, d, estado === 'activo' ? loadAgentesActivos : loadAgentesInactivos); return; }
+    c.innerHTML = items.map(a => `<div class="tbl-row" onclick="viewAgente(${a.id})"><div class="col c2"><strong>${a.nome}</strong></div><div class="col c1">${a.nip}</div><div class="col c2">${a.user?.perfil?.descricao || a.user?.perfil?.nome || '-'}</div><div class="col c2">${a.unidade?.nome || '-'}</div><div class="col c1">${a.patente?.nome || '-'}</div><div class="col c1"><span class="badge badge-${a.estado === 'activo' ? 'green' : 'gray'}">${a.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="event.stopPropagation();toggleAgente(${a.id})" title="${a.estado === 'activo' ? 'Desactivar' : 'Activar'}"><i class='bx ${a.estado === 'activo' ? 'bx-block' : 'bx-check-circle'}'></i></button></div></div>`).join('');
+    renderPag(pagId, d, estado === 'activo' ? loadAgentesActivos : loadAgentesInactivos);
+}
 async function loadUnidades() { const d = await api('/unidades'); if (!d) return; const c = document.getElementById('list-unidades'); if (!c) return; c.innerHTML = d.map(u => `<div class="tbl-row"><div class="col c2"><strong>${u.nome}</strong></div><div class="col c2">${u.tipo_unidade?.nome || '-'}</div><div class="col c2">${u.endereco || '-'}</div><div class="col c1"><span class="badge badge-${u.estado === 'activo' ? 'green' : 'gray'}">${u.estado}</span></div><div class="col c1"><button class="btn-icon" onclick="toggleUnidade(${u.id})"><i class='bx bx-power-off'></i></button></div></div>`).join(''); }
-function openIdTab(name, ev) { document.querySelectorAll('.idtab').forEach(t => t.classList.remove('active')); document.getElementById('idtab-' + name)?.classList.add('active'); if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } }
+
+async function viewAgente(id) {
+    showLoad();
+    const a = await api('/agentes/' + id);
+    hideLoad();
+    if (!a) return;
+
+    const perfil = a.user?.perfil?.descricao || a.user?.perfil?.nome || '-';
+    const estadoCls = a.estado === 'activo' ? 'green' : a.estado === 'suspenso' ? 'orange' : 'gray';
+    let h = `<div class="page-header"><div><h1 class="page-title">${a.nome}</h1><p class="page-desc">${a.nip || '-'} - ${perfil}</p></div><button class="btn-ghost" onclick="voltarPara('identidade')"><i class='bx bx-arrow-back'></i> Voltar</button></div>`;
+
+    h += `<div class="stats-grid" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-icon"><i class='bx bx-file'></i></div><div class="stat-info"><h3>${a.ocorrencias_registadas_count || 0}</h3><p>Registadas</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class='bx bx-user-check'></i></div><div class="stat-info"><h3>${a.ocorrencias_responsavel_count || 0}</h3><p>Responsavel</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class='bx bx-search-alt-2'></i></div><div class="stat-info"><h3>${a.investigacoes_count || 0}</h3><p>Investigacoes</p></div></div>
+        <div class="stat-card"><div class="stat-icon"><i class='bx bx-shield-quarter'></i></div><div class="stat-info"><h3>${a.patrulhas_count || 0}</h3><p>Patrulhas</p></div></div>
+    </div>`;
+
+    h += `<div class="grid-2">
+        <div class="card"><div class="card-head"><h3>Identificacao</h3></div><div class="card-body">
+            ${dl('Nome', a.nome)}${dl('NIP', a.nip)}${dl('BI', a.bi)}${dl('Sexo', a.sexo === 'M' ? 'Masculino' : a.sexo === 'F' ? 'Feminino' : '-')}${dl('Nascimento', fDate(a.data_nascimento))}${dl('Telefone', a.telefone)}${dl('Email', a.user?.email)}
+        </div></div>
+        <div class="card"><div class="card-head"><h3>Institucional</h3></div><div class="card-body">
+            ${dl('Perfil', perfil)}${dl('Patente', a.patente?.nome)}${dl('Unidade', a.unidade?.nome)}${dl('Tipo de Unidade', a.unidade?.tipo_unidade?.nome)}${dl('Admissao', fDate(a.data_admissao))}${dl('Estado', `<span class="badge badge-${estadoCls}">${a.estado || '-'}</span>`)}
+        </div></div>
+    </div>`;
+
+    h += renderAgenteOcorrencias('Ocorrencias Registadas', a.ocorrencias_registadas || []);
+    h += renderAgenteOcorrencias('Ocorrencias sob Responsabilidade', a.ocorrencias_responsavel || []);
+    h += renderAgenteDetencoes(a.detencoes || []);
+    h += renderAgenteInvestigacoes(a.investigacoes || []);
+    h += renderAgentePatrulhas(a.patrulhas || []);
+    h += renderAgenteRecursos(a);
+
+    renderMain('identidade', h);
+}
+
+function renderAgenteOcorrencias(titulo, items) {
+    if (!items.length) return '';
+    let h = `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>${titulo}</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Numero</div><div class="col c2">Crime</div><div class="col c2">Local</div><div class="col c1">Data</div><div class="col c1">Estado</div></div>`;
+    items.forEach(o => h += `<div class="tbl-row" onclick="viewOcorrencia(${o.id})"><div class="col c2"><strong>${o.numero_ocorrencia || '-'}</strong></div><div class="col c2">${o.tipo_crime?.nome || '-'}</div><div class="col c2">${o.local || '-'}</div><div class="col c1">${fDate(o.data_ocorrencia)}</div><div class="col c1">${bEstado(o.estado)}</div></div>`);
+    return h + '</div></div>';
+}
+
+function renderAgenteDetencoes(items) {
+    if (!items.length) return '';
+    let h = `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Detencoes</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Numero</div><div class="col c2">Detido</div><div class="col c2">Ocorrencia</div><div class="col c1">Data</div><div class="col c1">Estado</div></div>`;
+    items.forEach(d => h += `<div class="tbl-row" onclick="viewDetencao(${d.id})"><div class="col c2"><strong>${d.numero_detencao || '-'}</strong></div><div class="col c2">${d.pessoa?.nome || '-'}</div><div class="col c2">${d.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c1">${fDate(d.data_detencao)}</div><div class="col c1">${d.estado?.nome || '-'}</div></div>`);
+    return h + '</div></div>';
+}
+
+function renderAgenteInvestigacoes(items) {
+    if (!items.length) return '';
+    let h = `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Investigacoes</h3></div><div class="tbl"><div class="tbl-head"><div class="col c2">Numero</div><div class="col c2">Ocorrencia</div><div class="col c2">Crime</div><div class="col c1">Inicio</div><div class="col c1">Estado</div></div>`;
+    items.forEach(i => h += `<div class="tbl-row" onclick="viewInvestigacao(${i.id})"><div class="col c2"><strong>${i.numero_investigacao || '-'}</strong></div><div class="col c2">${i.ocorrencia?.numero_ocorrencia || '-'}</div><div class="col c2">${i.ocorrencia?.tipo_crime?.nome || '-'}</div><div class="col c1">${fDate(i.data_inicio)}</div><div class="col c1">${bEstado(i.estado)}</div></div>`);
+    return h + '</div></div>';
+}
+
+function renderAgentePatrulhas(items) {
+    if (!items.length) return '';
+    let h = `<div class="card" style="margin-top:14px;"><div class="card-head"><h3>Patrulhas</h3></div><div class="tbl"><div class="tbl-head"><div class="col c1">Data</div><div class="col c2">Zona</div><div class="col c1">Turno</div><div class="col c2">Unidade</div><div class="col c1">Funcao</div></div>`;
+    items.forEach(p => h += `<div class="tbl-row"><div class="col c1">${fDate(p.data)}</div><div class="col c2">${p.zona?.nome || '-'}</div><div class="col c1">${p.turno?.nome || '-'}</div><div class="col c2">${p.unidade?.nome || '-'}</div><div class="col c1">${p.pivot?.funcao || '-'}</div></div>`);
+    return h + '</div></div>';
+}
+
+function renderAgenteRecursos(a) {
+    const armas = a.armamento_atribuido || [];
+    const viaturas = a.viaturas_atribuidas || [];
+    if (!armas.length && !viaturas.length) return '';
+    let h = `<div class="grid-2" style="margin-top:14px;">`;
+    h += `<div class="card"><div class="card-head"><h3>Armamento Atribuido</h3></div><div class="card-body">${armas.length ? armas.map(x => dl(x.armamento?.numero_serie || '-', (x.armamento?.tipo_armamento?.nome || 'Armamento') + ' - ' + fDate(x.data_atribuicao))).join('') : '<div class="tbl-empty">Sem armamento atribuido.</div>'}</div></div>`;
+    h += `<div class="card"><div class="card-head"><h3>Viaturas em Uso</h3></div><div class="card-body">${viaturas.length ? viaturas.map(x => dl(x.viatura?.matricula || '-', (x.viatura?.marca || '') + ' ' + (x.viatura?.modelo || '') + ' - ' + fDT(x.data_saida))).join('') : '<div class="tbl-empty">Sem viatura em uso.</div>'}</div></div>`;
+    return h + '</div>';
+}
+
+function openIdTab(name, ev) { document.querySelectorAll('.idtab').forEach(t => t.classList.remove('active')); document.getElementById('idtab-' + name)?.classList.add('active'); if (ev) { ev.target.closest('.tabs-bar').querySelectorAll('.tab').forEach(t => t.classList.remove('active')); ev.target.classList.add('active'); } if (name === 'ag-new') carregarProximoNip(); }
 
 async function criarAgente(ev) {
     ev.preventDefault(); limparErros();
@@ -1207,7 +1314,7 @@ async function criarAgente(ev) {
     showLoad();
     const d = await api('/agentes', { method: 'POST', body: JSON.stringify({ nome: v('ag-nome'), nip: v('ag-nip'), bi: v('ag-bi'), email: v('ag-email'), telefone: v('ag-tel'), sexo: v('ag-sexo') || null, unidade_id: v('ag-unidade'), patente_id: v('ag-patente'), perfil_id: v('ag-perfil'), estado: v('ag-estado') }) });
     hideLoad();
-    if (d?.success) { toast('Agente registado com sucesso.', 'ok'); document.getElementById('form-agente')?.reset(); loadIdentidade(); openIdTab('ag-act'); }
+    if (d?.success) { toast('Agente registado com sucesso.', 'ok'); document.getElementById('form-agente')?.reset(); loadIdentidade(); carregarProximoNip(); openIdTab('ag-act'); }
     return false;
 }
 
