@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesOperationalAccess;
 use App\Models\Agente;
+use App\Models\Bairro;
 use App\Models\EnvolvimentoOcorrencia;
 use App\Models\GeolocalizacaoOcorrencia;
 use App\Models\Log;
@@ -55,33 +56,38 @@ class OcorrenciaController extends Controller
             'data_ocorrencia' => 'required|date|before_or_equal:today',
             'hora_ocorrencia' => 'nullable|date_format:H:i',
             'local' => 'required|string|min:3|max:500',
-            'bairro' => 'nullable|string|max:150',
+            'distrito_id' => 'required|exists:distritos,id',
+            'bairro_id' => 'required|exists:bairros,id',
             'prioridade' => ['required', Rule::in(['baixa', 'media', 'alta', 'critica'])],
-            'unidade_id' => 'required|exists:unidades,id',
             'agente_responsavel_id' => 'nullable|exists:agentes,id',
             'confidencial' => 'sometimes|boolean',
             'latitude' => 'nullable|required_with:longitude|numeric|between:-18.5,-5.0',
             'longitude' => 'nullable|required_with:latitude|numeric|between:11.0,25.0',
-            'bairro_id' => 'nullable|exists:bairros,id',
         ]);
+
+        $bairro = Bairro::with(['distrito', 'esquadra'])->findOrFail($dados['bairro_id']);
+        abort_unless((int) $bairro->distrito_id === (int) $dados['distrito_id'], 422, 'O bairro selecionado nao pertence ao distrito informado.');
+
+        $unidadeId = $bairro->esquadra_id ?? $bairro->unidade_responsavel_id;
+        abort_unless($unidadeId, 422, 'O bairro selecionado nao tem esquadra responsavel configurada.');
 
         if (!empty($dados['hora_ocorrencia'])) {
             $momentoOcorrencia = Carbon::createFromFormat('Y-m-d H:i', $dados['data_ocorrencia'] . ' ' . $dados['hora_ocorrencia']);
             abort_if($momentoOcorrencia->isFuture(), 422, 'A hora da ocorrencia nao pode estar no futuro.');
         }
 
-        $this->exigirUnidadePermitida((int) $dados['unidade_id']);
+        $this->exigirUnidadePermitida((int) $unidadeId);
 
         if (!empty($dados['agente_responsavel_id'])) {
             $agenteResponsavel = Agente::activos()->find($dados['agente_responsavel_id']);
-            abort_unless($agenteResponsavel && (int) $agenteResponsavel->unidade_id === (int) $dados['unidade_id'], 422, 'O agente responsavel deve estar activo e pertencer a unidade selecionada.');
+            abort_unless($agenteResponsavel && (int) $agenteResponsavel->unidade_id === (int) $unidadeId, 422, 'O agente responsavel deve estar activo e pertencer a esquadra responsavel pelo bairro.');
 
             if (!$this->temVisaoGlobal() && !$this->eChefeEsquadra() && (int) $dados['agente_responsavel_id'] !== $this->agenteAtualId()) {
                 abort(403, 'Agentes so podem atribuir ocorrencias a si mesmos.');
             }
         }
 
-        return DB::transaction(function () use ($dados) {
+        return DB::transaction(function () use ($dados, $bairro, $unidadeId) {
             $agente = $this->agenteAtual();
             abort_unless($agente, 422, 'O utilizador autenticado deve estar associado a um agente.');
 
@@ -92,12 +98,12 @@ class OcorrenciaController extends Controller
                 'data_ocorrencia' => $dados['data_ocorrencia'],
                 'hora_ocorrencia' => $dados['hora_ocorrencia'] ?? null,
                 'local' => $dados['local'],
-                'bairro' => $dados['bairro'] ?? null,
+                'bairro' => $bairro->nome,
                 'prioridade' => $dados['prioridade'],
                 'estado_id' => 1,
                 'agente_registo_id' => $agente->id,
                 'agente_responsavel_id' => $dados['agente_responsavel_id'] ?? null,
-                'unidade_id' => $dados['unidade_id'],
+                'unidade_id' => $unidadeId,
                 'confidencial' => $dados['confidencial'] ?? false,
             ]);
 
@@ -106,7 +112,7 @@ class OcorrenciaController extends Controller
                     'ocorrencia_id' => $oc->id,
                     'latitude' => $dados['latitude'],
                     'longitude' => $dados['longitude'],
-                    'bairro_id' => $dados['bairro_id'] ?? null,
+                    'bairro_id' => $bairro->id,
                 ]);
             }
 

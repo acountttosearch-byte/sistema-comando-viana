@@ -15,6 +15,7 @@ use App\Models\TipoMandado;
 use App\Models\TipoArmamento;
 use App\Models\TipoRelatorio;
 use App\Models\Bairro;
+use App\Models\Distrito;
 use App\Models\Unidade;
 use App\Models\Turno;
 
@@ -35,7 +36,8 @@ class DadosAuxiliaresController extends Controller
             'tipos_mandado' => TipoMandado::all(),
             'tipos_armamento' => TipoArmamento::all(),
             'tipos_relatorio' => TipoRelatorio::all(),
-            'bairros' => Bairro::orderBy('nome')->get(),
+            'distritos' => Distrito::with(['bairros' => fn ($q) => $q->with('esquadra')->orderBy('nome')])->orderBy('nome')->get(),
+            'bairros' => Bairro::with(['distrito', 'esquadra', 'unidadeResponsavel'])->orderBy('nome')->get(),
             'unidades' => Unidade::with('tipoUnidade')->activas()->orderBy('nome')->get(),
             'turnos' => Turno::all(),
         ]);

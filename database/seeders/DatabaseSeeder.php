@@ -21,15 +21,19 @@ class DatabaseSeeder extends Seeder
 
         // ═══════════════════════════════════════
         // UNIDADES POLICIAIS DE VIANA
-        // (Distritos urbanos 2025: Viana Sede, Zango, Estalagem, Kikuxi, Vila Flor, Baía)
+        // Distritos: Viana, Kikuxi e Estalagem
         // ═══════════════════════════════════════
         DB::table('unidades')->insert([
-            ['id' => 1, 'nome' => 'Comando Municipal de Viana', 'tipo_unidade_id' => 1, 'unidade_pai_id' => null, 'endereco' => 'Viana Sede', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'nome' => 'Esquadra de Viana Sede', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Viana Sede', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 3, 'nome' => 'Esquadra do Zango', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Zango', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 4, 'nome' => 'Esquadra de Kikuxi', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Kikuxi', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 5, 'nome' => 'Esquadra de Vila Flor', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Vila Flor', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 6, 'nome' => 'Posto Policial Zango 3', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 3, 'endereco' => 'Zango 3', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 1, 'nome' => 'Comando da Polícia Municipal de Viana', 'tipo_unidade_id' => 1, 'unidade_pai_id' => null, 'endereco' => 'Viana Sede', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'nome' => 'Esquadra Policial do Capalanga', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Capalanga', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'nome' => 'Esquadra da Comissão (44ª Esquadra)', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Comissão', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'nome' => 'Posto Policial da CAOP', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 1, 'endereco' => 'CAOP', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'nome' => 'Posto Policial de Belo Horizonte', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 1, 'endereco' => 'Belo Horizonte', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 6, 'nome' => 'Esquadra Sede do Kikuxi', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Paz', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 7, 'nome' => 'Posto Policial do Pantanal', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 1, 'endereco' => 'Pantanal', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 8, 'nome' => 'Esquadra do Grafanil', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Grafanil', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 9, 'nome' => 'Posto Policial do Ana Paula', 'tipo_unidade_id' => 3, 'unidade_pai_id' => 1, 'endereco' => 'Ana Paula', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 10, 'nome' => 'Esquadra Sede da Estalagem', 'tipo_unidade_id' => 2, 'unidade_pai_id' => 1, 'endereco' => 'Regedoria', 'municipio' => 'Viana', 'telefone' => null, 'email' => null, 'estado' => 'activo', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════
@@ -268,38 +272,39 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ═══════════════════════════════════════
-        // BAIRROS / DISTRITOS URBANOS DE VIANA (Divisão administrativa 2025)
-        // Distritos: Viana Sede, Zango, Estalagem, Kikuxi, Vila Flor, Baía
-        // Comuna: Calumbo
+        // DISTRITOS, BAIRROS E ESQUADRAS RESPONSAVEIS
         // ═══════════════════════════════════════
+        DB::table('distritos')->insert([
+            ['id' => 1, 'nome' => 'Viana', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'nome' => 'Kikuxi', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'nome' => 'Estalagem', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         DB::table('bairros')->insert([
-            ['nome' => 'Viana Sede', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Bairro da Paz', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Bairro Popular', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 0', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 1', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 2', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 3', 'municipio' => 'Viana', 'unidade_responsavel_id' => 6, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 4', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zango 5', 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Kikuxi', 'municipio' => 'Viana', 'unidade_responsavel_id' => 4, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Estalagem', 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Vila Flor', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Baía', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Calumbo', 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Capalanga', 'distrito_id' => 1, 'esquadra_id' => 2, 'municipio' => 'Viana', 'unidade_responsavel_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Comissão', 'distrito_id' => 1, 'esquadra_id' => 3, 'municipio' => 'Viana', 'unidade_responsavel_id' => 3, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'CAOP', 'distrito_id' => 1, 'esquadra_id' => 4, 'municipio' => 'Viana', 'unidade_responsavel_id' => 4, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Belo Horizonte', 'distrito_id' => 2, 'esquadra_id' => 5, 'municipio' => 'Viana', 'unidade_responsavel_id' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Paz', 'distrito_id' => 2, 'esquadra_id' => 6, 'municipio' => 'Viana', 'unidade_responsavel_id' => 6, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Pantanal', 'distrito_id' => 2, 'esquadra_id' => 7, 'municipio' => 'Viana', 'unidade_responsavel_id' => 7, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Grafanil', 'distrito_id' => 3, 'esquadra_id' => 8, 'municipio' => 'Viana', 'unidade_responsavel_id' => 8, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Ana Paula', 'distrito_id' => 3, 'esquadra_id' => 9, 'municipio' => 'Viana', 'unidade_responsavel_id' => 9, 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Regedoria', 'distrito_id' => 3, 'esquadra_id' => 10, 'municipio' => 'Viana', 'unidade_responsavel_id' => 10, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════
         // ZONAS DE PATRULHA (baseadas nos distritos urbanos 2025)
         // ═══════════════════════════════════════
         DB::table('zonas_patrulha')->insert([
-            ['nome' => 'Zona Viana Sede', 'descricao' => 'Área central e comercial de Viana Sede', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Zango Norte', 'descricao' => 'Zango 0, Zango 1, Zango 2', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Zango Sul', 'descricao' => 'Zango 3, Zango 4, Zango 5', 'unidade_id' => 3, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Kikuxi', 'descricao' => 'Distrito urbano de Kikuxi', 'unidade_id' => 4, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Vila Flor', 'descricao' => 'Distrito urbano de Vila Flor e zona industrial', 'unidade_id' => 5, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Estalagem', 'descricao' => 'Distrito urbano da Estalagem', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
-            ['nome' => 'Zona Baía', 'descricao' => 'Distrito urbano da Baía', 'unidade_id' => 5, 'nivel_risco' => 'baixo', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Capalanga', 'descricao' => 'Bairro Capalanga', 'unidade_id' => 2, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Comissão', 'descricao' => 'Bairro Comissão', 'unidade_id' => 3, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona CAOP', 'descricao' => 'Bairro CAOP', 'unidade_id' => 4, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Belo Horizonte', 'descricao' => 'Bairro Belo Horizonte', 'unidade_id' => 5, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Paz', 'descricao' => 'Bairro Paz', 'unidade_id' => 6, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Pantanal', 'descricao' => 'Bairro Pantanal', 'unidade_id' => 7, 'nivel_risco' => 'alto', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Grafanil', 'descricao' => 'Bairro Grafanil', 'unidade_id' => 8, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Ana Paula', 'descricao' => 'Bairro Ana Paula', 'unidade_id' => 9, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
+            ['nome' => 'Zona Regedoria', 'descricao' => 'Bairro Regedoria', 'unidade_id' => 10, 'nivel_risco' => 'medio', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // ═══════════════════════════════════════
@@ -307,7 +312,7 @@ class DatabaseSeeder extends Seeder
         // ═══════════════════════════════════════
         DB::table('configuracoes')->insert([
             ['chave' => 'nome_sistema', 'valor' => 'Sistema de Comunicação e Gerenciamento de Dados', 'tipo' => 'string', 'grupo' => 'geral', 'descricao' => 'Nome do sistema', 'created_at' => now(), 'updated_at' => now()],
-            ['chave' => 'entidade', 'valor' => 'Comando Municipal de Viana', 'tipo' => 'string', 'grupo' => 'geral', 'descricao' => 'Entidade proprietária', 'created_at' => now(), 'updated_at' => now()],
+            ['chave' => 'entidade', 'valor' => 'Comando da Polícia Municipal de Viana', 'tipo' => 'string', 'grupo' => 'geral', 'descricao' => 'Entidade proprietária', 'created_at' => now(), 'updated_at' => now()],
             ['chave' => 'prefixo_ocorrencia', 'valor' => 'OC-VNA', 'tipo' => 'string', 'grupo' => 'ocorrencias', 'descricao' => 'Prefixo do número de ocorrência', 'created_at' => now(), 'updated_at' => now()],
             ['chave' => 'prefixo_detencao', 'valor' => 'DT-VNA', 'tipo' => 'string', 'grupo' => 'detencoes', 'descricao' => 'Prefixo do número de detenção', 'created_at' => now(), 'updated_at' => now()],
             ['chave' => 'prefixo_investigacao', 'valor' => 'INV-VNA', 'tipo' => 'string', 'grupo' => 'investigacoes', 'descricao' => 'Prefixo do número de investigação', 'created_at' => now(), 'updated_at' => now()],

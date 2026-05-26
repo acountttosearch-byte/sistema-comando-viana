@@ -32,7 +32,7 @@ class ViaturaFactory extends Factory
             'modelo' => $v['modelo'],
             'ano' => fake()->numberBetween(2015, 2024),
             'cor' => fake()->randomElement(['Branco', 'Branco', 'Azul', 'Verde', 'Cinza']),
-            'unidade_id' => fake()->numberBetween(2, 6),
+            'unidade_id' => fake()->numberBetween(2, 10),
             'estado' => fake()->randomElement(['operacional', 'operacional', 'operacional', 'manutencao']),
             'quilometragem' => fake()->numberBetween(15000, 180000),
         ];

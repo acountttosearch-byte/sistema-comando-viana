@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Agente;
 use App\Models\Pessoa;
@@ -38,7 +39,7 @@ class TestDataSeeder extends Seeder
         $this->command->info('Criando os dados de teste...');
 
         // ══════════════════════════════
-        // 1. AGENTES (30)
+        // 1. AGENTES (17 + admin = 18)
         // ══════════════════════════════
         $this->command->info('   → Agentes...');
 
@@ -46,22 +47,32 @@ class TestDataSeeder extends Seeder
             ['nome' => 'Comissário António Fernandes', 'unidade' => 1, 'patente' => 1, 'perfil' => 2],
             ['nome' => 'Subcomissário Carlos Domingos', 'unidade' => 2, 'patente' => 2, 'perfil' => 3],
             ['nome' => 'Subcomissário Manuel Pereira', 'unidade' => 3, 'patente' => 2, 'perfil' => 3],
-            ['nome' => 'Intendente Rosa Santos', 'unidade' => 4, 'patente' => 4, 'perfil' => 3],
-            ['nome' => 'Intendente Pedro Correia', 'unidade' => 5, 'patente' => 4, 'perfil' => 3],
-            ['nome' => 'Inspector João Baptista', 'unidade' => 2, 'patente' => 6, 'perfil' => 4],
-            ['nome' => 'Inspector Maria Tavares', 'unidade' => 3, 'patente' => 6, 'perfil' => 4],
-            ['nome' => 'Subinspector Daniel Gonçalves', 'unidade' => 4, 'patente' => 7, 'perfil' => 4],
-            ['nome' => 'Inspector Alberto Mendes', 'unidade' => 5, 'patente' => 6, 'perfil' => 4],
+            ['nome' => 'Intendente Rosa Santos', 'unidade' => 6, 'patente' => 4, 'perfil' => 3],
+            ['nome' => 'Intendente Pedro Correia', 'unidade' => 10, 'patente' => 4, 'perfil' => 3],
+            ['nome' => 'Inspector João Baptista', 'unidade' => 4, 'patente' => 6, 'perfil' => 4],
+            ['nome' => 'Inspector Maria Tavares', 'unidade' => 7, 'patente' => 6, 'perfil' => 4],
+            ['nome' => 'Subinspector Daniel Gonçalves', 'unidade' => 8, 'patente' => 7, 'perfil' => 4],
         ];
 
         $agentes = [];
         $nipBase = 1001;
+        $emailDeNome = function (string $nome): string {
+            $partes = Str::of($nome)
+                ->lower()
+                ->ascii()
+                ->replaceMatches('/[^a-z\s]/', '')
+                ->squish()
+                ->explode(' ')
+                ->filter()
+                ->values();
+
+            return $partes->take(3)->implode('.') . '@policia-viana.ao';
+        };
 
         foreach ($agentesConfig as $c) {
             $nipBase++;
-            $emailBase = strtolower(str_replace(' ', '.', explode(' ', $c['nome'])[1] ?? 'ag'));
             $user = User::create([
-                'email' => $emailBase . $nipBase . '@policia-viana.ao',
+                'email' => $emailDeNome($c['nome']),
                 'password' => Hash::make(config('auth.default_agent_password')),
                 'perfil_id' => $c['perfil'], 'estado' => 'activo',
             ]);
@@ -79,22 +90,27 @@ class TestDataSeeder extends Seeder
             ]);
         }
 
-        // 21 agentes operacionais
-        $nomesM = ['Francisco', 'Domingos', 'Sebastião', 'Gilberto', 'Tomás', 'Mateus', 'Simão', 'Ricardo', 'André', 'Fernando', 'Paulo', 'Miguel'];
-        $nomesF = ['Ana', 'Teresa', 'Luísa', 'Helena', 'Joana', 'Marta'];
-        $apelidos = ['Silva', 'Santos', 'Neto', 'Machado', 'Costa', 'Lopes', 'Sousa', 'Oliveira', 'Bumba', 'Tchikela', 'Kiala', 'Mukuta', 'Ndala'];
+        $operacionais = [
+            ['nome' => 'Francisco Silva Neto', 'sexo' => 'M', 'unidade' => 2, 'perfil' => 5],
+            ['nome' => 'Ana Santos Costa', 'sexo' => 'F', 'unidade' => 3, 'perfil' => 6],
+            ['nome' => 'Sebastião Machado Lopes', 'sexo' => 'M', 'unidade' => 4, 'perfil' => 5],
+            ['nome' => 'Helena Sousa Oliveira', 'sexo' => 'F', 'unidade' => 5, 'perfil' => 5],
+            ['nome' => 'Gilberto Bumba Kiala', 'sexo' => 'M', 'unidade' => 6, 'perfil' => 5],
+            ['nome' => 'Joana Tchikela Santos', 'sexo' => 'F', 'unidade' => 7, 'perfil' => 6],
+            ['nome' => 'Mateus Costa Ndala', 'sexo' => 'M', 'unidade' => 8, 'perfil' => 5],
+            ['nome' => 'Teresa Lopes Mukuta', 'sexo' => 'F', 'unidade' => 9, 'perfil' => 5],
+            ['nome' => 'Ricardo Oliveira Silva', 'sexo' => 'M', 'unidade' => 10, 'perfil' => 5],
+        ];
 
-        for ($i = 0; $i < 21; $i++) {
+        foreach ($operacionais as $op) {
             $nipBase++;
-            $sexo = fake()->randomElement(['M', 'M', 'M', 'F']);
-            $nome = ($sexo === 'M' ? fake()->randomElement($nomesM) : fake()->randomElement($nomesF))
-                  . ' ' . fake()->randomElement($apelidos) . ' ' . fake()->randomElement($apelidos);
-            $perfilId = fake()->randomElement([5, 5, 5, 6]);
+            $sexo = $op['sexo'];
+            $nome = $op['nome'];
 
             $user = User::create([
-                'email' => 'agente' . $nipBase . '@policia-viana.ao',
+                'email' => $emailDeNome($nome),
                 'password' => Hash::make(config('auth.default_agent_password')),
-                'perfil_id' => $perfilId,
+                'perfil_id' => $op['perfil'],
                 'estado' => 'activo',
             ]);
             $agentes[] = Agente::create([
@@ -104,9 +120,9 @@ class TestDataSeeder extends Seeder
                 'data_nascimento' => fake()->dateTimeBetween('-40 years', '-22 years'),
                 'sexo' => $sexo, 'telefone' => '9' . fake()->numerify('########'),
                 'patente_id' => fake()->numberBetween(8, 11),
-                'unidade_id' => fake()->numberBetween(2, 6),
+                'unidade_id' => $op['unidade'],
                 'data_admissao' => fake()->dateTimeBetween('-10 years', '-6 months'),
-                'estado' => fake()->randomElement(['activo', 'activo', 'activo', 'activo', 'inactivo']),
+                'estado' => 'activo',
             ]);
         }
 
@@ -336,7 +352,7 @@ class TestDataSeeder extends Seeder
             ['tipo' => 3, 'titulo' => 'Idoso desaparecido na Estalagem', 'desc' => 'Homem de 72 anos, sofre de demência. Camisa branca, calças escuras.', 'prio' => 'alta'],
             ['tipo' => 4, 'titulo' => 'Reforço policial no mercado do Zango', 'desc' => 'Actividade criminosa crescente. Reforçar presença nos próximos 7 dias.', 'prio' => 'normal'],
             ['tipo' => 1, 'titulo' => 'Procurado por violação no Kikuxi', 'desc' => 'Mandado de captura emitido pelo tribunal provincial.', 'prio' => 'urgente'],
-            ['tipo' => 2, 'titulo' => 'Motorizada Honda roubada em Vila Flor', 'desc' => 'Honda XR 150, vermelha e preta. Furtada junto ao mercado.', 'prio' => 'normal'],
+            ['tipo' => 2, 'titulo' => 'Motorizada Honda roubada no Grafanil', 'desc' => 'Honda XR 150, vermelha e preta. Furtada junto ao mercado.', 'prio' => 'normal'],
         ];
 
         foreach ($alertasData as $ad) {
@@ -411,7 +427,7 @@ class TestDataSeeder extends Seeder
                 'bi' => fake()->boolean(60) ? fake()->numerify('##########LA###') : null,
                 'telefone' => '9' . fake()->numerify('########'),
                 'tipo_queixa' => $qx['tipo'], 'descricao' => $qx['desc'],
-                'local' => fake()->randomElement(['Zango 3', 'Viana Sede', 'Kikuxi', 'Vila Flor', 'Estalagem', 'Baía']),
+                'local' => fake()->randomElement(['Capalanga', 'Comissão', 'CAOP', 'Belo Horizonte', 'Paz', 'Pantanal', 'Grafanil', 'Ana Paula', 'Regedoria']),
                 'estado' => $estado,
                 'ocorrencia_id' => $estado === 'convertida' ? fake()->randomElement($ocorrenciasIds) : null,
                 'analisado_por' => in_array($estado, ['convertida', 'rejeitada', 'em_analise']) ? fake()->randomElement($agentesIds) : null,
@@ -470,7 +486,7 @@ class TestDataSeeder extends Seeder
         $this->command->newLine();
         $this->command->info('✅ DADOS DE TESTE CRIADOS!');
         $this->command->table(['Entidade', 'Qtd'], [
-            ['Agentes', count($agentes)],
+            ['Agentes', DB::table('agentes')->count()],
             ['Pessoas', 80],
             ['Ocorrências', 150],
             ['Envolvimentos', DB::table('envolvimento_ocorrencia')->count()],

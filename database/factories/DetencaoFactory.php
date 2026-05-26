@@ -27,14 +27,14 @@ class DetencaoFactory extends Factory
 
         // Locais reais de Viana
         $locais = [
-            'Mercado do Zango, Zango 3',
-            'Rua Principal, Viana Sede',
-            'Bar nocturno, Viana Sede',
-            'Zona residencial, Kikuxi',
-            'Paragem de táxi, Estalagem',
-            'Praça do Comércio, Vila Flor',
-            'Rotunda da Estalagem, Estalagem',
-            'Zona do mercado informal, Baía',
+            'Mercado do Capalanga',
+            'Rua Principal da Comissão',
+            'Paragem de táxi da CAOP',
+            'Zona residencial de Belo Horizonte',
+            'Mercado do bairro Paz',
+            'Rua principal do Pantanal',
+            'Rotunda do Grafanil',
+            'Mercado da Regedoria',
         ];
 
         return [

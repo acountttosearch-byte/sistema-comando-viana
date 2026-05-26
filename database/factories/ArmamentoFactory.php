@@ -25,7 +25,7 @@ class ArmamentoFactory extends Factory
             'modelo' => $dados['modelo'],
             'numero_serie' => strtoupper(fake()->bothify('??-####-####-##')),
             'calibre' => $dados['calibre'],
-            'unidade_id' => fake()->numberBetween(2, 6),
+            'unidade_id' => fake()->numberBetween(2, 10),
             'estado' => fake()->randomElement(['operacional', 'operacional', 'operacional', 'manutencao']),
         ];
     }

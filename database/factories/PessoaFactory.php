@@ -18,15 +18,17 @@ class PessoaFactory extends Factory
 
         $apelidos = ['Bumba', 'Tchikela', 'Zangui', 'Kiala', 'Mukuta', 'Ndala', 'Lukamba', 'Kasoma', 'Ngola', 'Samba', 'Vieira', 'Domingos', 'Santos', 'Costa', 'Pereira', 'Silva', 'Lopes', 'Correia', 'Mateus', 'Gonçalves', 'Fernandes'];
 
-        // Distritos urbanos reais do município de Viana (divisão administrativa 2025)
-        $distritos = ['Viana Sede', 'Zango', 'Estalagem', 'Kikuxi', 'Vila Flor', 'Baía'];
-        // Bairros reais dentro dos distritos
+        $bairros = ['Capalanga', 'Comissão', 'CAOP', 'Belo Horizonte', 'Paz', 'Pantanal', 'Grafanil', 'Ana Paula', 'Regedoria'];
         $bairrosCompletos = [
-            'Zango 0, Zango', 'Zango 1, Zango', 'Zango 2, Zango', 'Zango 3, Zango',
-            'Zango 4, Zango', 'Zango 5, Zango',
-            'Viana Sede, Viana', 'Estalagem, Viana', 'Kikuxi, Viana',
-            'Vila Flor, Viana', 'Baía, Viana',
-            'Bairro da Paz, Viana Sede', 'Bairro Popular, Viana Sede',
+            'Capalanga, Distrito de Viana',
+            'Comissão, Distrito de Viana',
+            'CAOP, Distrito de Viana',
+            'Belo Horizonte, Distrito do Kikuxi',
+            'Paz, Distrito do Kikuxi',
+            'Pantanal, Distrito do Kikuxi',
+            'Grafanil, Distrito da Estalagem',
+            'Ana Paula, Distrito da Estalagem',
+            'Regedoria, Distrito da Estalagem',
         ];
 
         // Definir sexo primeiro para garantir coerência com o nome
@@ -34,7 +36,7 @@ class PessoaFactory extends Factory
         $primeiroNome = $sexo === 'M' ? fake()->randomElement($nomesM) : fake()->randomElement($nomesF);
         $nome = $primeiroNome . ' ' . fake()->randomElement($apelidos) . ' ' . fake()->randomElement($apelidos);
 
-        $bairro = fake()->randomElement($distritos);
+        $bairro = fake()->randomElement($bairros);
         $morada = fake()->randomElement($bairrosCompletos) . ', Município de Viana';
 
         $nacionalidade = fake()->randomElement([

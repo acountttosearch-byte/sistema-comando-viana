@@ -23,7 +23,8 @@ class Unidade extends Model
     public function armamento() { return $this->hasMany(Armamento::class, 'unidade_id'); }
     public function patrulhas() { return $this->hasMany(Patrulha::class, 'unidade_id'); }
     public function zonasPatrulha() { return $this->hasMany(ZonaPatrulha::class, 'unidade_id'); }
-    public function bairros() { return $this->hasMany(Bairro::class, 'unidade_responsavel_id'); }
+    public function bairros() { return $this->hasMany(Bairro::class, 'esquadra_id'); }
+    public function bairrosLegados() { return $this->hasMany(Bairro::class, 'unidade_responsavel_id'); }
 
     public function scopeActivas($query) { return $query->where('estado', 'activo'); }
     public function scopeEsquadras($query) { return $query->where('tipo_unidade_id', 2); }
