@@ -368,26 +368,17 @@ function bairroPorId(bairroId) {
 
 function limparDestinoOcorrencia() {
     const unidade = document.getElementById('noc-unidade');
+    const esquadra = document.getElementById('noc-esquadra');
     if (unidade) unidade.value = '';
+    if (esquadra) esquadra.value = '';
     fillSel('noc-agente', [], 'id', 'nome', 'Definir depois');
-}
-
-function iniciarBairroOcorrencia() {
-    const bairroSel = document.getElementById('noc-bairro');
-    if (!bairroSel) return;
-    bairroSel.dataset.mode = 'distrito';
-    bairroSel.dataset.distritoId = '';
-    bairroSel.innerHTML = '<option value="">Selecionar bairro</option>'
-        + (aux.distritos || []).map(d => `<option value="${d.id}">${d.nome}</option>`).join('');
-    limparDestinoOcorrencia();
 }
 
 function preencherBairrosOcorrencia(distritoId) {
     const bairroSel = document.getElementById('noc-bairro');
     if (!bairroSel) return;
     const bairros = bairrosDoDistrito(distritoId);
-    bairroSel.dataset.mode = 'bairro';
-    bairroSel.dataset.distritoId = distritoId || '';
+    bairroSel.disabled = !distritoId;
     bairroSel.innerHTML = `<option value="">${distritoId ? 'Selecionar bairro' : 'Selecione primeiro o distrito'}</option>`
         + bairros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
     limparDestinoOcorrencia();
@@ -397,22 +388,15 @@ async function actualizarDestinoOcorrencia(bairroId) {
     limparDestinoOcorrencia();
     const bairro = bairroPorId(bairroId);
     const unidadeId = bairro?.esquadra_id || bairro?.unidade_responsavel_id || '';
+    const unidadeNome = bairro?.esquadra?.nome || bairro?.unidade_responsavel?.nome || '';
     const unidade = document.getElementById('noc-unidade');
+    const esquadra = document.getElementById('noc-esquadra');
     if (unidade) unidade.value = unidadeId;
+    if (esquadra) esquadra.value = unidadeNome;
     if (unidadeId) {
         const ag = await api('/agentes?estado=activo&unidade_id=' + unidadeId);
         if (ag) fillSel('noc-agente', ag, 'id', 'nome', 'Definir depois');
     }
-}
-
-function handleBairroOcorrenciaChange() {
-    const bairroSel = document.getElementById('noc-bairro');
-    if (!bairroSel) return;
-    if (bairroSel.dataset.mode === 'distrito') {
-        preencherBairrosOcorrencia(bairroSel.value);
-        return;
-    }
-    actualizarDestinoOcorrencia(bairroSel.value);
 }
 
 // ══════════════════
@@ -478,12 +462,15 @@ function formNovaOcorrencia() {
                 <div class="form-col"><label>Hora</label><input type="time" id="noc-hora"></div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Local</label><input type="text" id="noc-local" placeholder="Descreva o local da ocorrencia"></div>
-                <div class="form-col"><label>Bairro</label><select id="noc-bairro" required></select></div>
+                <div class="form-col"><label>Distrito</label>${mkSel('noc-distrito', aux.distritos, 'id', 'nome', 'Selecionar distrito')}</div>
+                <div class="form-col"><label>Bairro</label><select id="noc-bairro" required disabled><option value="">Selecione primeiro o distrito</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-col"><label>Unidade Policial</label>${mkSel('noc-unidade', aux.unidades, 'id', 'nome')}</div>
-                <div class="form-col"><label>Agente Responsavel</label><select id="noc-agente"><option value="">Definir depois</option></select><span class="form-hint">Selecione a unidade primeiro</span></div>
+                <div class="form-col"><label>Local especifico</label><input type="text" id="noc-local" placeholder="Ex: Rua 4, em frente ao mercado da AngoMart"></div>
+                <div class="form-col"><label>Esquadra responsavel</label><input type="hidden" id="noc-unidade"><input type="text" id="noc-esquadra" disabled placeholder="Definida automaticamente pelo bairro"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-col"><label>Agente Responsavel</label><select id="noc-agente"><option value="">Definir depois</option></select><span class="form-hint">Definido de acordo com a esquadra do bairro</span></div>
             </div>
             <div class="form-col" style="margin-bottom:14px;"><label>Descricao Detalhada</label><textarea id="noc-desc" rows="5" placeholder="Descreva os factos com o maximo de detalhes possiveis..."></textarea></div>
 
@@ -507,10 +494,12 @@ function formNovaOcorrencia() {
         </div>
     `);
 
-    iniciarBairroOcorrencia();
-    const unidade = document.getElementById('noc-unidade');
-    if (unidade) unidade.disabled = true;
-    document.getElementById('noc-bairro')?.addEventListener('change', handleBairroOcorrenciaChange);
+    document.getElementById('noc-distrito')?.addEventListener('change', function () {
+        preencherBairrosOcorrencia(this.value);
+    });
+    document.getElementById('noc-bairro')?.addEventListener('change', function () {
+        actualizarDestinoOcorrencia(this.value);
+    });
 }
 
 function addEvidenciaTemp() {
@@ -548,16 +537,15 @@ async function submitNovaOcorrencia() {
     erros.push(validarObrigatorio('noc-data', 'Data'));
     erros.push(validarCampo('noc-data', validarDataNaoFutura));
     erros.push(validarCampo('noc-hora', validarHoraOcorrencia));
+    erros.push(validarObrigatorio('noc-distrito', 'Distrito'));
     erros.push(validarObrigatorio('noc-bairro', 'Bairro'));
     erros.push(validarObrigatorio('noc-local', 'Local'));
     erros.push(validarObrigatorio('noc-desc', 'Descricao'));
     erros = erros.filter(e => e !== null);
-    const bairroSelecionado = bairroPorId(v('noc-bairro'));
-    if (!bairroSelecionado) erros.push('Selecione o bairro.');
     if (erros.length) { toast('Corrija os erros assinalados.', 'err'); return; }
 
     showLoad();
-    const d = await api('/ocorrencias', { method: 'POST', body: JSON.stringify({ tipo_crime_id: v('noc-tipo'), prioridade: v('noc-prio'), data_ocorrencia: v('noc-data'), hora_ocorrencia: v('noc-hora') || null, distrito_id: bairroSelecionado.distrito_id, bairro_id: v('noc-bairro'), local: v('noc-local'), agente_responsavel_id: v('noc-agente') || null, descricao: v('noc-desc') }) });
+    const d = await api('/ocorrencias', { method: 'POST', body: JSON.stringify({ tipo_crime_id: v('noc-tipo'), prioridade: v('noc-prio'), data_ocorrencia: v('noc-data'), hora_ocorrencia: v('noc-hora') || null, distrito_id: v('noc-distrito'), bairro_id: v('noc-bairro'), local: v('noc-local'), agente_responsavel_id: v('noc-agente') || null, descricao: v('noc-desc') }) });
 
     if (!d?.success) { hideLoad(); return; }
 
